@@ -15,10 +15,17 @@ public class Entry {
 	public int getCounter() {
 		return counter;
 	}
+	
 	public void setCounter(int counter) {
 		this.counter = counter;
 	}
-	
-	
+
+	public String getTitle() {
+		return title;
+	}
+
+	public String getUrl() {
+		return url;
+	}
 
 }
