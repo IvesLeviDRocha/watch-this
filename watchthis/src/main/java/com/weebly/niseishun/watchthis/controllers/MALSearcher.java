@@ -35,7 +35,7 @@ public class MALSearcher {
   private String listLineSelector = "tbody.list-item > tr.list-table-data";
   private String lineScoreSelector = "td.data.score";
   private String lineTitleSelector = "td.data.title.clearfix > a.link.sort";
-  private String seriesPagePrefix = "https://myanimelist.net";
+  private String seriesPagePrefix = "https://myanimelist.net/anime/";
   private String malAPIurlPrefix = "http://myanimelist.net/malappinfo.php?u=";
   private String malAPIurlSufix = "&status=all&type=anime.";
 
@@ -85,19 +85,17 @@ public class MALSearcher {
     HashMap<String, Entry> entriesMap = new HashMap<String, Entry>();
     String[] urlElements = seriesUrl.split("/");
     String seriesName = urlElements[urlElements.length - 1].replaceAll("_", " ");
+    System.out.println(seriesName);
     for (User user : users) {
-      System.out.println("user: " + user.getUsername());
       try {
         PageScrapper userList = PageScrapper.fromUrl(user.getListUrl());
         String test = userList.selectFirstElement(categoryTotalsSelector).html();
         int index = test.indexOf("Mean Score: ");
         index = index + 12;
         float userMeanScore = Float.valueOf(test.substring(index, index + 3));
-        System.out.println(userMeanScore);
 
 
         String apiUrl = malAPIurlPrefix + user.getUsername() + malAPIurlSufix;
-        System.out.println(apiUrl);
 
         URL url = new URL(apiUrl);
         URLConnection connection = url.openConnection();
@@ -111,7 +109,7 @@ public class MALSearcher {
           // get children
           Node node = descNodes.item(i);
           NodeList children = node.getChildNodes();
-          // for each child
+          // check if completed
           boolean completed = false;
           for (int j = 0; i < children.getLength(); j++) {
             Node childNode = children.item(j);
@@ -123,7 +121,55 @@ public class MALSearcher {
               break;
             }
           }
-          System.out.println(completed);
+          if (!completed) {
+            continue;
+          }
+
+          // get series name and check if its the input series
+          String seriesTitle = "";
+          for (int j = 0; i < children.getLength(); j++) {
+            Node childNode = children.item(j);
+            if (childNode.getNodeName().equals("series_title")) {
+              seriesTitle = childNode.getTextContent();
+              break;
+            }
+          }
+          if (seriesTitle.equals(seriesName)) {
+            continue;
+          }
+
+          // get score and check if its above mean score
+          float seriesScore = 0f;
+          for (int j = 0; i < children.getLength(); j++) {
+            Node childNode = children.item(j);
+            if (childNode.getNodeName().equals("my_score")) {
+              seriesScore = Float.valueOf(childNode.getTextContent());
+              break;
+            }
+          }
+          if (seriesScore >= userMeanScore) {
+            // get series url
+            String seriesId = "";
+            for (int j = 0; i < children.getLength(); j++) {
+              Node childNode = children.item(j);
+              if (childNode.getNodeName().equals("series_animedb_id")) {
+                seriesId = childNode.getTextContent();
+                break;
+              }
+            }
+            // check if already in map
+            if (entriesMap.containsKey(seriesTitle)) {
+              entriesMap.get(seriesTitle).incrementCounter();
+            } else {
+              String seriesPageSufix = "/" + seriesTitle.replaceAll(" ", "_");
+              String entryUrl = seriesPagePrefix + seriesId + seriesPageSufix;
+              Entry entry = new Entry(seriesTitle, entryUrl);
+              entriesMap.put(seriesTitle, entry);
+            }
+
+          }
+
+
         }
 
 
@@ -144,21 +190,25 @@ public class MALSearcher {
          * Entry(seriesTitle, series); entriesMap.put(seriesTitle, entry); } } }
          */
       } catch (Exception e) {
-        System.out.println("Could not access list");
-        e.printStackTrace();
+        // System.out.println("Could not access list");
       }
     }
-    Collection<Entry> entryCollection = entriesMap.values();
-    ArrayList<Entry> entries = new ArrayList<Entry>(entryCollection);
-    for (Entry entry : entries) {
-      if (entry.getCounter() < minLikes) {
-        System.out.println("REMOVING: " + entry.getTitle() + " || Counter: " + entry.getCounter());
-        entries.remove(entry);
-      } else {
-        System.out.println("KEEPING: " + entry.getTitle() + " || Counter: " + entry.getCounter());
+    /*
+     * Collection<Entry> entryCollection = entriesMap.values(); ArrayList<Entry> entries = new
+     * ArrayList<Entry>(entryCollection); for (Entry entry : entries) { if (entry.getCounter() <
+     * minLikes) { System.out.println("REMOVING: " + entry.getTitle() + " || Counter: " +
+     * entry.getCounter()); entries.remove(entry); } else { System.out.println("KEEPING: " +
+     * entry.getTitle() + " || Counter: " + entry.getCounter()); } }
+     */
+    ArrayList<Entry> entries = new ArrayList<Entry>();
+    for (String key : entriesMap.keySet()) {
+      Entry entry = entriesMap.get(key);
+      if (entry.getCounter() >= minLikes) {
+        entries.add(entry);
       }
     }
     Collections.sort(entries);
+    Collections.reverse(entries);
     return entries;
   }
 

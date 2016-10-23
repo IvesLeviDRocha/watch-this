@@ -7,22 +7,19 @@ import com.weebly.niseishun.watchthis.controllers.MALSearcher;
 import com.weebly.niseishun.watchthis.model.Entry;
 import com.weebly.niseishun.watchthis.model.User;
 
-/**
- * Hello world!
- *
- */
+
 public class App {
   public static void main(String[] args) {
-    System.out.println("Hello World!");
     MALSearcher ms = new MALSearcher();
+    String url = "https://myanimelist.net/anime/15809/Hataraku_Maou-sama";
     try {
-      ArrayList<User> users =
-          ms.getLastUpdatedUsers("https://myanimelist.net/anime/5762/15_Bishoujo_Hyouryuuki/", 3);
-      ArrayList<Entry> recs = ms.getRecommendedSeriesFromUsers(users, 2,
-          "https://myanimelist.net/anime/5762/15_Bishoujo_Hyouryuuki/");
+      ArrayList<User> users = ms.getLastUpdatedUsers(url, 500);
+      ArrayList<Entry> recs = ms.getRecommendedSeriesFromUsers(users, 10, url);
+      for (Entry entry : recs) {
+        System.out.println("Series: " + entry.getTitle() + " || Liked by: " + entry.getCounter());
+      }
     } catch (IOException e) {
-      System.out.println("IOE error!");
-      e.printStackTrace();
+      // ioe error
     }
 
   }
