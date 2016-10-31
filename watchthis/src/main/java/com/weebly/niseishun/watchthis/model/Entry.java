@@ -1,5 +1,12 @@
 package com.weebly.niseishun.watchthis.model;
 
+/**
+ * Entity representing a series with a title, a url of the series's page on its website, and a
+ * counter representing the popularity of the series among relevant users.
+ * 
+ * @author Levi R
+ *
+ */
 public class Entry implements Comparable<Entry> {
 
   private String title;

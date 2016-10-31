@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -15,13 +14,18 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.w3c.dom.Document;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.weebly.niseishun.watchthis.model.Entry;
 import com.weebly.niseishun.watchthis.model.User;
 
+/**
+ * This searcher implements the functionalities pertaining to the source MyAnimeList.
+ * 
+ * @author Levi Rocha
+ *
+ */
 public class MALSearcher {
 
   private String userSelector = "table.table-recently-updated > tbody > tr:not(:first-child)";
@@ -32,9 +36,6 @@ public class MALSearcher {
   private String statsSuffix = "/stats?m=all&show=";
   private int pageElementsIncrement = 75;
   private String categoryTotalsSelector = ":contains(Mean Score:)";
-  private String listLineSelector = "tbody.list-item > tr.list-table-data";
-  private String lineScoreSelector = "td.data.score";
-  private String lineTitleSelector = "td.data.title.clearfix > a.link.sort";
   private String seriesPagePrefix = "https://myanimelist.net/anime/";
   private String malAPIurlPrefix = "http://myanimelist.net/malappinfo.php?u=";
   private String malAPIurlSufix = "&status=all&type=anime.";
@@ -168,38 +169,11 @@ public class MALSearcher {
             }
 
           }
-
-
         }
-
-
-        /*
-         * Elements listLines = userList.selectElements(listLineSelector); ArrayList<String>
-         * likedSeries = new ArrayList<String>(); boolean likedInputSeries = false; for (Element
-         * element : listLines) { System.out.println("Element: " + element.toString()); Element
-         * titleElement = element.select(lineTitleSelector).first(); String title =
-         * titleElement.html(); System.out.println("Checking: " + title); float score =
-         * Float.valueOf(element.select(lineScoreSelector).first().html()); if
-         * (seriesName.equals(title)) { if (score < userMeanScore) { break; } else {
-         * likedInputSeries = true; continue; } } if (score >= userMeanScore) { String
-         * likedSeriesUrl = seriesPagePrefix + titleElement.attr("href"); likedSeries.add(title); }
-         * } if (likedInputSeries) { for (String series : likedSeries) { String[] seriesUrlParts =
-         * series.split("/"); String seriesTitle = seriesUrlParts[seriesUrlParts.length -
-         * 1].replaceAll("_", " "); if (entriesMap.containsKey(seriesTitle)) {
-         * entriesMap.get(seriesTitle).incrementCounter(); } else { Entry entry = new
-         * Entry(seriesTitle, series); entriesMap.put(seriesTitle, entry); } } }
-         */
       } catch (Exception e) {
         // System.out.println("Could not access list");
       }
     }
-    /*
-     * Collection<Entry> entryCollection = entriesMap.values(); ArrayList<Entry> entries = new
-     * ArrayList<Entry>(entryCollection); for (Entry entry : entries) { if (entry.getCounter() <
-     * minLikes) { System.out.println("REMOVING: " + entry.getTitle() + " || Counter: " +
-     * entry.getCounter()); entries.remove(entry); } else { System.out.println("KEEPING: " +
-     * entry.getTitle() + " || Counter: " + entry.getCounter()); } }
-     */
     ArrayList<Entry> entries = new ArrayList<Entry>();
     for (String key : entriesMap.keySet()) {
       Entry entry = entriesMap.get(key);
