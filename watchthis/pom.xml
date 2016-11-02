@@ -4,11 +4,9 @@
 
 	<groupId>com.weebly.niseishun</groupId>
 	<artifactId>watchthis</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>watchthis</name>
-	<url>http://maven.apache.org</url>
+	<name>Watch This</name>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -28,4 +26,6 @@
 			<version>1.9.2</version>
 		</dependency>
 	</dependencies>
+	<description>Get recommendations based on your favorite series.</description>
+	<version>0.1.1</version>
 </project>
