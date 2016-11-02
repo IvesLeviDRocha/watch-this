@@ -37,7 +37,7 @@ public class MALSearcher {
   private int pageElementsIncrement = 75;
   private String categoryTotalsSelector = ":contains(Mean Score:)";
   private String seriesPagePrefix = "https://myanimelist.net/anime/";
-  private String malAPIurlPrefix = "http://myanimelist.net/malappinfo.php?u=";
+  private String malAPIurlPrefix = "https://myanimelist.net/malappinfo.php?u=";
   private String malAPIurlSufix = "&status=all&type=anime.";
 
   /**
@@ -86,7 +86,6 @@ public class MALSearcher {
     HashMap<String, Entry> entriesMap = new HashMap<String, Entry>();
     String[] urlElements = seriesUrl.split("/");
     String seriesName = urlElements[urlElements.length - 1].replaceAll("_", " ");
-    System.out.println(seriesName);
     for (User user : users) {
       try {
         PageScrapper userList = PageScrapper.fromUrl(user.getListUrl());
@@ -171,7 +170,7 @@ public class MALSearcher {
           }
         }
       } catch (Exception e) {
-        // System.out.println("Could not access list");
+        //System.out.println("Could not access list");
       }
     }
     ArrayList<Entry> entries = new ArrayList<Entry>();
@@ -193,9 +192,9 @@ public class MALSearcher {
     try {
       objDocumentBuilderFactory = DocumentBuilderFactory.newInstance();
       objDocumentBuilder = objDocumentBuilderFactory.newDocumentBuilder();
-
       doc = objDocumentBuilder.parse(stream);
     } catch (Exception ex) {
+      System.out.println("throwing ex when parsing xml");
       throw ex;
     }
 

@@ -34,7 +34,7 @@ public class QueryHandler {
           users = searcher.getLastUpdatedUsers(url, numOfUsersToCheck);
           recommendations = searcher.getRecommendedSeriesFromUsers(users, minimumPopularity, url);
         } catch (IOException e) {
-          // TODO IOE error
+          System.out.println("ioe in QH");
           e.printStackTrace();
         }
         break;
