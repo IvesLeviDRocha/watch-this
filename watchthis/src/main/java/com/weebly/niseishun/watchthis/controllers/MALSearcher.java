@@ -6,7 +6,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -83,106 +83,192 @@ public class MALSearcher {
    */
   public ArrayList<Entry> getRecommendedSeriesFromUsers(ArrayList<User> users, int minLikes,
       String seriesUrl) throws IOException {
-    HashMap<String, Entry> entriesMap = new HashMap<String, Entry>();
+    int simultaneousThreads = 6;
+    ConcurrentHashMap<String, Entry> entriesMap = new ConcurrentHashMap<String, Entry>();
+    //TODO get proper series name
     String[] urlElements = seriesUrl.split("/");
-    String seriesName = urlElements[urlElements.length - 1].replaceAll("_", " ");
-    for (User user : users) {
-      try {
-        PageScrapper userList = PageScrapper.fromUrl(user.getListUrl());
-        String test = userList.selectFirstElement(categoryTotalsSelector).html();
-        int index = test.indexOf("Mean Score: ");
-        index = index + 12;
-        float userMeanScore = Float.valueOf(test.substring(index, index + 3));
-
-
-        String apiUrl = malAPIurlPrefix + user.getUsername() + malAPIurlSufix;
-
-        URL url = new URL(apiUrl);
-        URLConnection connection = url.openConnection();
-
-        Document doc = parseXML(connection.getInputStream());
-
-        NodeList descNodes = doc.getElementsByTagName("anime");
-
-        // for each anime node
-        for (int i = 0; i < descNodes.getLength(); i++) {
-          // get children
-          Node node = descNodes.item(i);
-          NodeList children = node.getChildNodes();
-          // check if completed
-          boolean completed = false;
-          for (int j = 0; i < children.getLength(); j++) {
-            Node childNode = children.item(j);
-            if (childNode.getNodeName().equals("my_status")) {
-              int status = Integer.valueOf(childNode.getTextContent());
-              if (status == 2) {
-                completed = true;
-              }
-              break;
-            }
-          }
-          if (!completed) {
-            continue;
-          }
-
-          // get series name and check if its the input series
-          String seriesTitle = "";
-          for (int j = 0; i < children.getLength(); j++) {
-            Node childNode = children.item(j);
-            if (childNode.getNodeName().equals("series_title")) {
-              seriesTitle = childNode.getTextContent();
-              break;
-            }
-          }
-          if (seriesTitle.equals(seriesName)) {
-            continue;
-          }
-
-          // get score and check if its above mean score
-          float seriesScore = 0f;
-          for (int j = 0; i < children.getLength(); j++) {
-            Node childNode = children.item(j);
-            if (childNode.getNodeName().equals("my_score")) {
-              seriesScore = Float.valueOf(childNode.getTextContent());
-              break;
-            }
-          }
-          if (seriesScore >= userMeanScore) {
-            // get series url
-            String seriesId = "";
-            for (int j = 0; i < children.getLength(); j++) {
-              Node childNode = children.item(j);
-              if (childNode.getNodeName().equals("series_animedb_id")) {
-                seriesId = childNode.getTextContent();
-                break;
-              }
-            }
-            // check if already in map
-            if (entriesMap.containsKey(seriesTitle)) {
-              entriesMap.get(seriesTitle).incrementCounter();
-            } else {
-              String seriesPageSufix = "/" + seriesTitle.replaceAll(" ", "_");
-              String entryUrl = seriesPagePrefix + seriesId + seriesPageSufix;
-              Entry entry = new Entry(seriesTitle, entryUrl);
-              entriesMap.put(seriesTitle, entry);
-            }
-
+    String seriesName = urlElements[urlElements.length - 1].replaceAll("__", ": ").replaceAll("_", " ");
+    System.out.println(seriesName);
+    for (int i = 0; i < users.size(); i += simultaneousThreads) {
+      ArrayList<Thread> retrievers = new ArrayList<Thread>();
+      for (int j = i; j < i + simultaneousThreads; j++) {
+        if (j < users.size()) {
+          User user = users.get(j);
+          Thread retriever = new Thread(new MALListRetriever(user, entriesMap, seriesName));
+          retrievers.add(retriever);
+          retriever.start();
+          try {
+            Thread.sleep(50);
+          } catch (InterruptedException e) {
+            e.printStackTrace();
           }
         }
-      } catch (Exception e) {
-        //System.out.println("Could not access list");
+      }
+      for (Thread retriever : retrievers) {
+        try {
+          retriever.join();
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
       }
     }
     ArrayList<Entry> entries = new ArrayList<Entry>();
+
+    int counterForInputSeries = entriesMap.get(seriesName).getCounter();
+    entriesMap.remove(seriesName);
+
     for (String key : entriesMap.keySet()) {
       Entry entry = entriesMap.get(key);
       if (entry.getCounter() >= minLikes) {
+        entry.updateCounterRelativeToMaxPopularity(counterForInputSeries);
         entries.add(entry);
       }
     }
     Collections.sort(entries);
     Collections.reverse(entries);
     return entries;
+  }
+
+  class MALListRetriever implements Runnable {
+
+    private User user;
+    private ConcurrentHashMap<String, Entry> entriesMap;
+    private String inputSeriesTitle;
+
+    public MALListRetriever(User user, ConcurrentHashMap<String, Entry> entriesMap,
+        String inputSeriesTitle) {
+      this.user = user;
+      this.entriesMap = entriesMap;
+      this.inputSeriesTitle = inputSeriesTitle;
+    }
+
+    public void run() {
+      boolean stop = false;
+      int tries = 0;
+      while (!stop) {
+        try {
+          PageScrapper userList = PageScrapper.fromUrl(user.getListUrl());
+          String mean = userList.selectFirstElement(categoryTotalsSelector).html();
+          int index = mean.indexOf("Mean Score: ");
+          index = index + 12;
+          float userMeanScore = Float.valueOf(mean.substring(index, index + 3));
+          ArrayList<Entry> userLikedSeries = new ArrayList<Entry>();
+
+          String apiUrl = malAPIurlPrefix + user.getUsername() + malAPIurlSufix;
+
+
+
+          URL url = new URL(apiUrl);
+          URLConnection connection = url.openConnection();
+
+          Document doc = parseXML(connection.getInputStream());
+
+          NodeList descNodes = doc.getElementsByTagName("anime");
+
+          boolean relevant = false;
+
+          // for each anime node
+          for (int i = 0; i < descNodes.getLength(); i++) {
+            // get children
+            Node node = descNodes.item(i);
+            NodeList children = node.getChildNodes();
+            // check if completed
+            boolean completed = false;
+            for (int j = 0; j < children.getLength(); j++) {
+              Node childNode = children.item(j);
+              if (childNode.getNodeName().equals("my_status")) {
+                int status = Integer.valueOf(childNode.getTextContent());
+                if (status == 2) {
+                  completed = true;
+                }
+                break;
+              }
+            }
+            if (!completed) {
+              continue;
+            }
+
+            // get series name
+            String seriesTitle = "";
+            for (int j = 0; j < children.getLength(); j++) {
+              Node childNode = children.item(j);
+              if (childNode.getNodeName().equals("series_title")) {
+                seriesTitle = childNode.getTextContent();
+                break;
+              }
+            }
+
+            // get score and check if its above mean score
+            float seriesScore = 0f;
+            for (int j = 0; j < children.getLength(); j++) {
+              Node childNode = children.item(j);
+              if (childNode.getNodeName().equals("my_score")) {
+                seriesScore = Float.valueOf(childNode.getTextContent());
+                break;
+              }
+            }
+            boolean inputSeries = false;
+            // check if input series
+            if (seriesTitle.equals(inputSeriesTitle)) {
+              inputSeries = true;
+            }
+            // check if above mean score
+            if (seriesScore >= userMeanScore) {
+              if (inputSeries) {
+                relevant = true;
+              }
+              // get series url
+              String seriesId = "";
+              for (int j = 0; j < children.getLength(); j++) {
+                Node childNode = children.item(j);
+                if (childNode.getNodeName().equals("series_animedb_id")) {
+                  seriesId = childNode.getTextContent();
+                  break;
+                }
+              }
+              // check if already in map
+              String seriesPageSufix = "/" + seriesTitle.replaceAll(": ", "__").replaceAll(" ", "_");
+              String entryUrl = seriesPagePrefix + seriesId + seriesPageSufix;
+              Entry entry = new Entry(seriesTitle, entryUrl);
+              userLikedSeries.add(entry);
+            } else {
+              if (inputSeries) {
+                relevant = false;
+                break;
+              }
+            }
+          }
+          if (relevant) {
+            for (Entry entry : userLikedSeries) {
+              String seriesTitle = entry.getTitle();
+              if (entriesMap.containsKey(entry.getTitle())) {
+                entriesMap.get(seriesTitle).incrementCounter();
+              } else {
+                entriesMap.put(seriesTitle, entry);
+              }
+            }
+          }
+          stop = true;
+        } catch (Exception e) {
+          tries++;
+          if (tries > 1) {
+            stop = true;
+            break;
+          }
+          try {
+            Thread.sleep(200);
+          } catch (InterruptedException e1) {
+            System.out.println("could not wait");
+          }
+        }
+      }
+    }
+
   }
 
   private Document parseXML(InputStream stream) throws Exception {

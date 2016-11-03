@@ -28,7 +28,11 @@ public class Entry implements Comparable<Entry> {
   }
 
   public void incrementCounter() {
-    this.counter++;
+    counter++;
+  }
+
+  public void updateCounterRelativeToMaxPopularity(int maxPopularity) {
+    counter = counter * 100 / maxPopularity;
   }
 
   public String getTitle() {
