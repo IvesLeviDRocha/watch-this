@@ -32,13 +32,14 @@ public class MALSearcher {
   private String nameSelector = "td.borderClass.di-t.w100:first-child > div.di-tc.va-m.al.pl4 > a";
   private String listUrlPrefix = "https://myanimelist.net/animelist/";
   private String listUrlSuffix = "?status=2";
-  private String statusSelector = "td:nth-child(3)";
   private String statsSuffix = "/stats?m=all&show=";
   private int pageElementsIncrement = 75;
   private String categoryTotalsSelector = ":contains(Mean Score:)";
   private String seriesPagePrefix = "https://myanimelist.net/anime/";
   private String malAPIurlPrefix = "https://myanimelist.net/malappinfo.php?u=";
   private String malAPIurlSufix = "&status=all&type=anime.";
+  private String titleSelector = "#contentWrapper > div:nth-child(1) > h1 > span";
+  private String scoreSelectorFromStats = "td:nth-child(2)";
 
   /**
    * get last users to update a series on MAL
@@ -59,8 +60,8 @@ public class MALSearcher {
         if (users.size() >= numOfUsers) {
           break;
         }
-        String status = element.select(statusSelector).first().html();
-        if (status.equals("Completed")) {
+        String score = element.select(scoreSelectorFromStats).first().html();
+        if (!score.equals("-")) {
           String username = element.select(nameSelector).first().html();
           String listUrl = listUrlPrefix + username + listUrlSuffix;
           User user = new User(username, listUrl);
@@ -85,10 +86,10 @@ public class MALSearcher {
       String seriesUrl) throws IOException {
     int simultaneousThreads = 6;
     ConcurrentHashMap<String, Entry> entriesMap = new ConcurrentHashMap<String, Entry>();
-    //TODO get proper series name
-    String[] urlElements = seriesUrl.split("/");
-    String seriesName = urlElements[urlElements.length - 1].replaceAll("__", ": ").replaceAll("_", " ");
-    System.out.println(seriesName);
+
+    PageScrapper seriesPage = PageScrapper.fromUrl(seriesUrl);
+    String seriesName = seriesPage.selectFirstElement(titleSelector).html();
+
     for (int i = 0; i < users.size(); i += simultaneousThreads) {
       ArrayList<Thread> retrievers = new ArrayList<Thread>();
       for (int j = i; j < i + simultaneousThreads; j++) {
@@ -120,6 +121,7 @@ public class MALSearcher {
     ArrayList<Entry> entries = new ArrayList<Entry>();
 
     int counterForInputSeries = entriesMap.get(seriesName).getCounter();
+    System.out.println("relevant users checked: " + counterForInputSeries);
     entriesMap.remove(seriesName);
 
     for (String key : entriesMap.keySet()) {
@@ -162,7 +164,6 @@ public class MALSearcher {
           String apiUrl = malAPIurlPrefix + user.getUsername() + malAPIurlSufix;
 
 
-
           URL url = new URL(apiUrl);
           URLConnection connection = url.openConnection();
 
@@ -177,21 +178,6 @@ public class MALSearcher {
             // get children
             Node node = descNodes.item(i);
             NodeList children = node.getChildNodes();
-            // check if completed
-            boolean completed = false;
-            for (int j = 0; j < children.getLength(); j++) {
-              Node childNode = children.item(j);
-              if (childNode.getNodeName().equals("my_status")) {
-                int status = Integer.valueOf(childNode.getTextContent());
-                if (status == 2) {
-                  completed = true;
-                }
-                break;
-              }
-            }
-            if (!completed) {
-              continue;
-            }
 
             // get series name
             String seriesTitle = "";
@@ -200,6 +186,30 @@ public class MALSearcher {
               if (childNode.getNodeName().equals("series_title")) {
                 seriesTitle = childNode.getTextContent();
                 break;
+              }
+            }
+
+            // check if input series
+            boolean inputSeries = false;
+            if (seriesTitle.equals(inputSeriesTitle)) {
+              inputSeries = true;
+            }
+
+            if (!inputSeries) {
+              // check if completed (only matters if its not the input)
+              boolean completed = false;
+              for (int j = 0; j < children.getLength(); j++) {
+                Node childNode = children.item(j);
+                if (childNode.getNodeName().equals("my_status")) {
+                  int status = Integer.valueOf(childNode.getTextContent());
+                  if (status == 2) {
+                    completed = true;
+                  }
+                  break;
+                }
+              }
+              if (!completed) {
+                continue;
               }
             }
 
@@ -212,16 +222,14 @@ public class MALSearcher {
                 break;
               }
             }
-            boolean inputSeries = false;
-            // check if input series
-            if (seriesTitle.equals(inputSeriesTitle)) {
-              inputSeries = true;
-            }
+
+
             // check if above mean score
             if (seriesScore >= userMeanScore) {
               if (inputSeries) {
                 relevant = true;
               }
+
               // get series url
               String seriesId = "";
               for (int j = 0; j < children.getLength(); j++) {
@@ -231,9 +239,7 @@ public class MALSearcher {
                   break;
                 }
               }
-              // check if already in map
-              String seriesPageSufix = "/" + seriesTitle.replaceAll(": ", "__").replaceAll(" ", "_");
-              String entryUrl = seriesPagePrefix + seriesId + seriesPageSufix;
+              String entryUrl = seriesPagePrefix + seriesId;
               Entry entry = new Entry(seriesTitle, entryUrl);
               userLikedSeries.add(entry);
             } else {
@@ -242,6 +248,7 @@ public class MALSearcher {
                 break;
               }
             }
+
           }
           if (relevant) {
             for (Entry entry : userLikedSeries) {
