@@ -28,11 +28,11 @@ public class QueryHandler {
     ArrayList<Entry> recommendations = new ArrayList<Entry>();
     switch (source) {
       case MAL:
-        MALSearcher searcher = new MALSearcher();
+        MALSearcher searcher = new MALSearcher(url);
         ArrayList<User> users;
         try {
-          users = searcher.getLastUpdatedUsers(url, numOfUsersToCheck);
-          recommendations = searcher.getRecommendedSeriesFromUsers(users, minimumPopularity, url);
+          users = searcher.getLastUpdatedUsers(numOfUsersToCheck);
+          recommendations = searcher.getRecommendedSeriesFromUsers(users, minimumPopularity);
         } catch (IOException e) {
           System.out.println("ioe in QH");
           e.printStackTrace();

@@ -40,6 +40,22 @@ public class MALSearcher {
   private String malAPIurlSufix = "&status=all&type=anime.";
   private String titleSelector = "#contentWrapper > div:nth-child(1) > h1 > span";
   private String scoreSelectorFromStats = "td:nth-child(2)";
+  private String detailsSelector = "#horiznav_nav > ul > li:nth-child(1) > a";
+
+  private String url;
+
+  public MALSearcher(String url) {
+    PageScrapper inputPage;
+    try {
+      inputPage = PageScrapper.fromUrl(url);
+      this.url = inputPage.selectFirstElement(detailsSelector).attr("href");
+    } catch (IOException e) {
+      System.out.println("error connecting");
+      e.printStackTrace();
+      this.url = url;
+    }
+    System.out.println("mal searcher created for " + this.url);
+  }
 
   /**
    * get last users to update a series on MAL
@@ -49,7 +65,7 @@ public class MALSearcher {
    * @return list of users with specified size
    * @throws IOException
    */
-  public ArrayList<User> getLastUpdatedUsers(String url, int numOfUsers) throws IOException {
+  public ArrayList<User> getLastUpdatedUsers(int numOfUsers) throws IOException {
     ArrayList<User> users = new ArrayList<User>();
     int page = 0;
     while (users.size() < numOfUsers) {
@@ -82,12 +98,12 @@ public class MALSearcher {
    * @return list of recommended series
    * @throws IOException
    */
-  public ArrayList<Entry> getRecommendedSeriesFromUsers(ArrayList<User> users, int minLikes,
-      String seriesUrl) throws IOException {
+  public ArrayList<Entry> getRecommendedSeriesFromUsers(ArrayList<User> users, int minLikes)
+      throws IOException {
     int simultaneousThreads = 6;
     ConcurrentHashMap<String, Entry> entriesMap = new ConcurrentHashMap<String, Entry>();
 
-    PageScrapper seriesPage = PageScrapper.fromUrl(seriesUrl);
+    PageScrapper seriesPage = PageScrapper.fromUrl(url);
     String seriesName = seriesPage.selectFirstElement(titleSelector).html();
 
     for (int i = 0; i < users.size(); i += simultaneousThreads) {
