@@ -2,10 +2,13 @@ package com.weebly.niseishun.watchthis.controllers;
 
 import java.io.IOException;
 
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+
+import com.weebly.niseishun.watchthis.exception.PageUnavailableException;
 
 /**
  * Wrapper for Jsoup and document classes. Maintains only one document element for one page. Use
@@ -23,11 +26,29 @@ public class PageScrapper {
    * 
    * @param url of page
    * @return page scrapper object
+   * @throws PageUnavailableException 
    * @throws IOException
    */
-  public static PageScrapper fromUrl(String url) throws IOException {
-    Document document = getDocFromUrl(url);
-    return new PageScrapper(document);
+  public static PageScrapper fromUrl(String url) throws PageUnavailableException {
+    Document document;
+    while (true) {
+      boolean permission = false;
+      while (!permission) {
+        permission = RequestManager.requestPermission();
+      }
+      try {
+        document = getDocFromUrl(url);
+        return new PageScrapper(document);
+      } catch (IOException e) {
+        System.out.println("could not make page scrapper");
+        if (e instanceof HttpStatusException) {
+          HttpStatusException httpse = (HttpStatusException) e;
+          if (httpse.getStatusCode() != 429) {
+            throw new PageUnavailableException();
+          }
+        }
+      }
+    }
   }
 
   private PageScrapper(Document doc) {

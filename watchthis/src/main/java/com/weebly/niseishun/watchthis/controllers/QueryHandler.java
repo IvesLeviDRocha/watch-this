@@ -1,8 +1,8 @@
 package com.weebly.niseishun.watchthis.controllers;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
+import com.weebly.niseishun.watchthis.exception.PageUnavailableException;
 import com.weebly.niseishun.watchthis.model.Entry;
 import com.weebly.niseishun.watchthis.model.Source;
 import com.weebly.niseishun.watchthis.model.User;
@@ -24,17 +24,18 @@ public class QueryHandler {
    */
   public ArrayList<Entry> getRecommendationsWithURL(String url, Source source) {
     int numOfUsersToCheck = 48;
-    int minimumPopularity = 4;
+    int minimumPopularity = 12;
     ArrayList<Entry> recommendations = new ArrayList<Entry>();
     switch (source) {
       case MAL:
-        MALSearcher searcher = new MALSearcher(url);
+        MALSearcher searcher;
         ArrayList<User> users;
         try {
+          searcher = new MALSearcher(url);
           users = searcher.getLastUpdatedUsers(numOfUsersToCheck);
           recommendations = searcher.getRecommendedSeriesFromUsers(users, minimumPopularity);
-        } catch (IOException e) {
-          System.out.println("ioe in QH");
+        } catch (PageUnavailableException e) {
+          // TODO Auto-generated catch block
           e.printStackTrace();
         }
         break;
