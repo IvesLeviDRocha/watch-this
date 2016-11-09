@@ -13,6 +13,7 @@ public class Entry implements Comparable<Entry> {
   private String url;
   private int counter;
   private float bonus;
+  private float popularity;
 
   public Entry(String title, String url) {
     this.title = title;
@@ -33,8 +34,12 @@ public class Entry implements Comparable<Entry> {
     counter++;
   }
 
-  public void updateCounterRelativeToMaxPopularity(int maxPopularity) {
-    counter = counter * 100 / maxPopularity;
+  public void calculatePopularity(int sampleSize) {
+    popularity = counter * 1f / sampleSize;
+  }
+
+  public float getPopularity() {
+    return popularity;
   }
 
   public void addToBonus(float valueToAdd) {
@@ -52,13 +57,13 @@ public class Entry implements Comparable<Entry> {
   public String getUrl() {
     return url;
   }
-  
+
   public void setUrl(String url) {
     this.url = url;
   }
 
   public float getMatchValue() {
-    return counter + bonus;
+    return popularity * 100 + bonus;
   }
 
 }

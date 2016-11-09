@@ -4,12 +4,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class RequestManager {
 
-  private static int requestLimit = 6;
+  private static int requestLimit = 3;
+  private static int browserRequestLimit = 30;
   private static AtomicInteger requests;
-  private static long refreshTime = 400;
+  private static AtomicInteger browserRequests;
+  private static long refreshTime = 500;
+
+  public static final int BROWSER = 0;
+  public static final int MALAPI = 1;
 
   public static void init() {
     requests = new AtomicInteger(0);
+    browserRequests = new AtomicInteger(0);
     Thread refresher = new Thread(new Runnable() {
       public void run() {
         while (true) {
@@ -25,38 +31,54 @@ public class RequestManager {
           if (requests.get() > 0) {
             requests.decrementAndGet();
           }
+          if (browserRequests.get() > 0) {
+            browserRequests.set(0);
+          }
         }
       }
     });
     refresher.start();
   }
 
-  public static boolean requestPermission() {
-    boolean timeout = false;
-    long tries = 0;
-    while (!timeout) {
-      if (requests.get() < requestLimit) {
-        requests.incrementAndGet();
-        return true;
-      } else {
-        if (tries > 100) {
-          // exception?
-          timeout = true;
-          break;
-        }
-        boolean slept = false;
-        while (!slept) {
-          try {
-            Thread.sleep(200);
-            slept = true;
-          } catch (InterruptedException e) {
-            // did not sleep, try again
+  public static boolean requestPermission(int category) {
+    switch (category) {
+      case BROWSER:
+        while (true) {
+          if (browserRequests.get() < browserRequestLimit) {
+            browserRequests.incrementAndGet();
+            return true;
+          }
+          boolean slept = false;
+          while (!slept) {
+            try {
+              Thread.sleep(200);
+              slept = true;
+            } catch (InterruptedException e) {
+              // did not sleep, try again
+            }
           }
         }
-        tries++;
-      }
+      case MALAPI:
+        while (true) {
+          if (requests.get() < requestLimit) {
+            requests.incrementAndGet();
+            return true;
+          }
+          boolean slept = false;
+          while (!slept) {
+            try {
+              Thread.sleep(200);
+              slept = true;
+            } catch (InterruptedException e) {
+              // did not sleep, try again
+            }
+          }
+        }
+      default:
+        return false;
+
     }
-    return false;
+
   }
 
 

@@ -23,14 +23,15 @@ import com.weebly.niseishun.watchthis.model.User;
  */
 public class MALSearcher {
 
-  private float mainVAValue = 1f;
+  private float mainVAValue = 2f;
   private float otherVAValue = 0.5f;
-  private float directorValue = 8f;
-  private float creatorValue = 10f;
-  private float musicValue = 6f;
-  private float animationDirectorValue = 3f;
-  private float seriesCompositionValue = 3f;
-  private float characterDesignValue = 3f;
+  private float directorValue = 20f;
+  private float creatorValue = 30f;
+  private float musicValue = 15f;
+  private float scriptValue = 15f;
+  private float animationDirectorValue = 10f;
+  private float seriesCompositionValue = 15f;
+  private float characterDesignValue = 10f;
 
   public static final String userSelector =
       "table.table-recently-updated > tbody > tr:not(:first-child)";
@@ -53,7 +54,8 @@ public class MALSearcher {
       "#content > table > tbody > tr > td:nth-child(2) > div.js-scrollfix-bottom-rel > table:last-child > tbody > tr";
   public static final String staffNameSelector = "td:nth-child(2) > a";
   public static final String staffPositionSelector = "td:nth-child(2) > small";
-  public static final String categoryTotalsSelector = ":contains(Mean Score:)";
+  public static final String categoryTotalsSelector =
+      ":contains(Mean Score:), td.category_totals:contains(Mean Score:)";
   public static final String seriesPagePrefix = "https://myanimelist.net/anime/";
   public static final String malAPIurlPrefix = "https://myanimelist.net/malappinfo.php?u=";
   public static final String malAPIurlSufix = "&status=all&type=anime.";
@@ -71,6 +73,9 @@ public class MALSearcher {
     staffPositions.put("Series Composition", seriesCompositionValue);
     staffPositions.put("Animation Director", animationDirectorValue);
     staffPositions.put("Character Design", characterDesignValue);
+    staffPositions.put("Script", scriptValue);
+    staffPositions.put("Original Character Design", characterDesignValue);
+    staffPositions.put("Chief Animation Director", animationDirectorValue);
 
 
     System.out.println("mal searcher created for " + this.url);
@@ -119,7 +124,7 @@ public class MALSearcher {
    * @throws PageUnavailableException
    * @throws IOException
    */
-  public ArrayList<Entry> getRecommendedSeriesFromUsers(ArrayList<User> users, int minLikes)
+  public ArrayList<Entry> getRecommendedSeriesFromUsers(ArrayList<User> users, float minPopularity)
       throws PageUnavailableException {
     ConcurrentHashMap<String, Entry> entriesMap = new ConcurrentHashMap<String, Entry>();
     // get series data
@@ -133,8 +138,12 @@ public class MALSearcher {
     List<Element> characterList = seriesPage.selectElements(characterStaffListSelector);
     characterList = characterList.subList(0, characterList.size() - 1);
     for (Element element : characterList) {
+      Elements nameContainers = element.select(MALSearcher.vaNameSelector);
+      if (nameContainers.toString().equals("")) {
+        continue;
+      }
+      String va = nameContainers.first().html();
       String role = element.select(characterRoleSelector).first().html();
-      String va = element.select(vaNameSelector).first().html();
       if (role.equals("Main")) {
         staff.addToList(va, mainVAValue);
       } else {
@@ -190,17 +199,14 @@ public class MALSearcher {
     System.out.println("relevant users checked: " + counterForInputSeries);
     entriesMap.remove(seriesName);
 
-    // adjust minLikes based on max popularity
-    int minPopularity = minLikes * 100 / counterForInputSeries;
-
     // for each entry above minimum popularity, adjust popularity counter, calculate bonus and
     // add to list
     System.out.println("entriesMap size: " + entriesMap.size());
     ArrayList<Thread> checkers = new ArrayList<Thread>();
     for (String key : entriesMap.keySet()) {
       Entry entry = entriesMap.get(key);
-      entry.updateCounterRelativeToMaxPopularity(counterForInputSeries);
-      if (entry.getCounter() >= minPopularity) {
+      entry.calculatePopularity(counterForInputSeries);
+      if (entry.getPopularity() >= minPopularity) {
         Thread checker = new Thread(new MALEntryChecker(entries, entry, staff));
         checkers.add(checker);
         checker.start();
@@ -209,11 +215,12 @@ public class MALSearcher {
     for (Thread checker : checkers) {
       try {
         checker.join();
+        System.out.println("checker joined");
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
     }
-
+    System.out.println("total recommendations: " + entries.size());
 
     // sort list of entries by popularity
     Collections.sort(entries);

@@ -26,7 +26,7 @@ public class PageScrapper {
    * 
    * @param url of page
    * @return page scrapper object
-   * @throws PageUnavailableException 
+   * @throws PageUnavailableException
    * @throws IOException
    */
   public static PageScrapper fromUrl(String url) throws PageUnavailableException {
@@ -34,15 +34,15 @@ public class PageScrapper {
     while (true) {
       boolean permission = false;
       while (!permission) {
-        permission = RequestManager.requestPermission();
+        permission = RequestManager.requestPermission(RequestManager.BROWSER);
       }
       try {
         document = getDocFromUrl(url);
         return new PageScrapper(document);
       } catch (IOException e) {
-        System.out.println("could not make page scrapper");
         if (e instanceof HttpStatusException) {
           HttpStatusException httpse = (HttpStatusException) e;
+          System.out.println(httpse.getStatusCode());
           if (httpse.getStatusCode() != 429) {
             throw new PageUnavailableException();
           }

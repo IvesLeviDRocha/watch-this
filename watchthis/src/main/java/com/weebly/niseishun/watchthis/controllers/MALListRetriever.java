@@ -1,6 +1,8 @@
 package com.weebly.niseishun.watchthis.controllers;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -9,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.jsoup.nodes.Element;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -33,26 +36,36 @@ class MALListRetriever implements Runnable {
 
   public void run() {
     boolean stop = false;
-    int tries = 0;
-    while (!stop) {
+    PageScrapper userList;
+    float userMeanScore = 0f;
+    String apiUrl = "";
+    ArrayList<Entry> userLikedSeries = new ArrayList<Entry>();
+    while (true) {
       try {
-        PageScrapper userList = PageScrapper.fromUrl(user.getListUrl());
-        String mean = userList.selectFirstElement(MALSearcher.categoryTotalsSelector).html();
+        userList = PageScrapper.fromUrl(user.getListUrl());
+        Element meanElement = userList.selectFirstElement(MALSearcher.categoryTotalsSelector);
+        if (meanElement == null) {
+          System.out.println("null element : could not parse user's list");
+          System.out.println("user: " + user.getUsername() + " | url: " + user.getListUrl());
+          stop = true;
+          break;
+        }
+        String mean = meanElement.html();
         int index = mean.indexOf("Mean Score: ");
         index = index + 12;
-        float userMeanScore = Float.valueOf(mean.substring(index, index + 3));
-        ArrayList<Entry> userLikedSeries = new ArrayList<Entry>();
-
-        String apiUrl =
-            MALSearcher.malAPIurlPrefix + user.getUsername() + MALSearcher.malAPIurlSufix;
-
-        URL url = new URL(apiUrl);
-        URLConnection connection = url.openConnection();
-
-        Document doc = parseXML(connection.getInputStream());
+        userMeanScore = Float.valueOf(mean.substring(index, index + 3));
+        apiUrl = MALSearcher.malAPIurlPrefix + user.getUsername() + MALSearcher.malAPIurlSufix;
+        break;
+      } catch (PageUnavailableException e) {
+        stop = true;
+        break;
+      }
+    }
+    while (!stop) {
+      try {
+        Document doc = getDoc(apiUrl);
 
         NodeList descNodes = doc.getElementsByTagName("anime");
-
         boolean relevant = false;
 
         // for each anime node
@@ -130,9 +143,7 @@ class MALListRetriever implements Runnable {
               break;
             }
           }
-
         }
-
         // if user is relevant, add data to map
         if (relevant) {
           for (Entry entry : userLikedSeries) {
@@ -144,24 +155,47 @@ class MALListRetriever implements Runnable {
             }
           }
         }
-        stop = true;
-      } catch (PageUnavailableException pue) {
-        System.out.println("cannot access page");
-        stop = true;
         break;
       } catch (Exception e) {
-        tries++;
-        if (tries > 1) {
-          stop = true;
-          break;
-        }
-        try {
-          Thread.sleep(200);
-        } catch (InterruptedException e1) {
-          System.out.println("could not wait");
-        }
+        System.out.println("parse error?");
+        e.printStackTrace();
+        break;
       }
     }
+  }
+
+  private Document getDoc(String apiUrl) {
+    URL url;
+    Document doc;
+    try {
+      url = new URL(apiUrl);
+    } catch (MalformedURLException e) {
+      System.out.println("malformed url");
+      return null;
+    }
+    while (true) {
+      boolean permission = false;
+      while (!permission) {
+        permission = RequestManager.requestPermission(RequestManager.MALAPI);
+      }
+      URLConnection connection;
+      try {
+        connection = url.openConnection();
+        doc = parseXML(connection.getInputStream());
+        return doc;
+      } catch (IOException e) {
+        if (e.getMessage().contains("429")) {
+          System.out.println("429 in getConnection");
+          continue;
+        }
+        break;
+      } catch (Exception e) {
+        System.out.println("parse problem?");
+        e.printStackTrace();
+        return null;
+      }
+    }
+    return null;
   }
 
   private Document parseXML(InputStream stream) throws Exception {

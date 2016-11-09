@@ -165,7 +165,8 @@ public class MainGUI {
   }
 
   private JButton buttonToPage(Entry entry) {
-    String text = entry.getTitle() + " |  Match: " + entry.getMatchValue() + "%";
+    String text =
+        entry.getTitle() + " |  Match: " + Math.floor(entry.getMatchValue()) + "% | (" + entry.getBonus() + ")";
     JButton button = new JButton(text);
     button.addActionListener(new OpenUrlAction(entry.getUrl()));
     button.setFont(smallFont);
