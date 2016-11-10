@@ -32,7 +32,7 @@ public class MALSearcher {
   public static final float animationDirectorValue = 12f;
   public static final float seriesCompositionValue = 18f;
   public static final float characterDesignValue = 12f;
-  public static final float genreValue = 18f;
+  public static final float genreValue = 16f;
   public static final float genreValueDecline = 0f;
 
   public static final String userSelector =
