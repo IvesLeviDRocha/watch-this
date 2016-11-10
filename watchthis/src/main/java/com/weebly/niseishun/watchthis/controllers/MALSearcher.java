@@ -23,15 +23,17 @@ import com.weebly.niseishun.watchthis.model.User;
  */
 public class MALSearcher {
 
-  private float mainVAValue = 2f;
-  private float otherVAValue = 0.5f;
-  private float directorValue = 20f;
-  private float creatorValue = 30f;
-  private float musicValue = 15f;
-  private float scriptValue = 15f;
-  private float animationDirectorValue = 10f;
-  private float seriesCompositionValue = 15f;
-  private float characterDesignValue = 10f;
+  public static final float mainVAValue = 2f;
+  public static final float otherVAValue = 0.5f;
+  public static final float directorValue = 28f;
+  public static final float creatorValue = 36f;
+  public static final float musicValue = 18f;
+  public static final float scriptValue = 18f;
+  public static final float animationDirectorValue = 12f;
+  public static final float seriesCompositionValue = 18f;
+  public static final float characterDesignValue = 12f;
+  public static final float genreValue = 18f;
+  public static final float genreValueDecline = 0f;
 
   public static final String userSelector =
       "table.table-recently-updated > tbody > tr:not(:first-child)";
@@ -59,10 +61,13 @@ public class MALSearcher {
   public static final String seriesPagePrefix = "https://myanimelist.net/anime/";
   public static final String malAPIurlPrefix = "https://myanimelist.net/malappinfo.php?u=";
   public static final String malAPIurlSufix = "&status=all&type=anime.";
+  public static final String genreSelector =
+      "#content > table > tbody > tr > td.borderClass > div > div:contains(Genre) > a";
 
 
   private String url;
   private HashMap<String, Float> staffPositions;
+  private HashMap<String, Float> genres;
 
   public MALSearcher(String url) throws PageUnavailableException {
     this.url = absoluteUrl(url);
@@ -76,6 +81,7 @@ public class MALSearcher {
     staffPositions.put("Script", scriptValue);
     staffPositions.put("Original Character Design", characterDesignValue);
     staffPositions.put("Chief Animation Director", animationDirectorValue);
+    genres = new HashMap<String, Float>();
 
 
     System.out.println("mal searcher created for " + this.url);
@@ -138,11 +144,11 @@ public class MALSearcher {
     List<Element> characterList = seriesPage.selectElements(characterStaffListSelector);
     characterList = characterList.subList(0, characterList.size() - 1);
     for (Element element : characterList) {
-      Elements nameContainers = element.select(MALSearcher.vaNameSelector);
-      if (nameContainers.toString().equals("")) {
+      Element nameContainer = element.select(MALSearcher.vaNameSelector).first();
+      if (nameContainer == null) {
         continue;
       }
-      String va = nameContainers.first().html();
+      String va = nameContainer.html();
       String role = element.select(characterRoleSelector).first().html();
       if (role.equals("Main")) {
         staff.addToList(va, mainVAValue);
@@ -153,7 +159,11 @@ public class MALSearcher {
     // for each staff
     Elements staffList = seriesPage.selectElements(staffListSelector);
     for (Element element : staffList) {
-      String[] roles = element.select(staffPositionSelector).first().html().split(", ");
+      Element staffPosition = element.select(staffPositionSelector).first();
+      if (staffPosition == null) {
+        continue;
+      }
+      String[] roles = staffPosition.html().split(", ");
       String name = element.select(staffNameSelector).first().html();
       for (String role : roles) {
         if (staffPositions.containsKey(role)) {
@@ -162,6 +172,16 @@ public class MALSearcher {
       }
     }
     System.out.println("done staff list");
+    // for each genre
+    Elements genreList = seriesPage.selectElements(genreSelector);
+    int dec = 0;
+    for (Element genre : genreList) {
+      if (genre == null) {
+        continue;
+      }
+      genres.put(genre.html(), genreValue - dec * genreValueDecline);
+      dec++;
+    }
 
     ArrayList<Thread> retrievers = new ArrayList<Thread>();
     for (int i = 0; i < users.size(); i++) {
@@ -173,7 +193,6 @@ public class MALSearcher {
     for (Thread retriever : retrievers) {
       try {
         retriever.join();
-        System.out.println("retriever joined");
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
@@ -195,19 +214,23 @@ public class MALSearcher {
     ArrayList<Entry> entries = new ArrayList<Entry>();
 
     // confirm total of relevant users and remove input series from list
+    int initialSampleSize = users.size();
     int counterForInputSeries = entriesMap.get(seriesName).getCounter();
     System.out.println("relevant users checked: " + counterForInputSeries);
     entriesMap.remove(seriesName);
+    float popularityAdjustingFactor = counterForInputSeries * 1f / initialSampleSize;
+    Entry.updatePopularityAdjustingFactor(popularityAdjustingFactor);
 
     // for each entry above minimum popularity, adjust popularity counter, calculate bonus and
     // add to list
     System.out.println("entriesMap size: " + entriesMap.size());
     ArrayList<Thread> checkers = new ArrayList<Thread>();
+
     for (String key : entriesMap.keySet()) {
       Entry entry = entriesMap.get(key);
       entry.calculatePopularity(counterForInputSeries);
       if (entry.getPopularity() >= minPopularity) {
-        Thread checker = new Thread(new MALEntryChecker(entries, entry, staff));
+        Thread checker = new Thread(new MALEntryChecker(entries, entry, staff, genres));
         checkers.add(checker);
         checker.start();
       }
@@ -215,7 +238,6 @@ public class MALSearcher {
     for (Thread checker : checkers) {
       try {
         checker.join();
-        System.out.println("checker joined");
       } catch (InterruptedException e) {
         e.printStackTrace();
       }

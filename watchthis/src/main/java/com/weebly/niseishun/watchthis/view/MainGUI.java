@@ -75,7 +75,7 @@ public class MainGUI {
 
     controlPanel = new JPanel();
     controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.PAGE_AXIS));
-    controlPanel.setPreferredSize(new Dimension(680, 720));
+    controlPanel.setPreferredSize(new Dimension(900, 720));
     controlPanel.setBorder(new EmptyBorder(10, 20, 50, 20));
     inputPanel = new JPanel();
     inputPanel.setPreferredSize(new Dimension(500, 260));
@@ -117,7 +117,7 @@ public class MainGUI {
     loadingCard = new JPanel();
     ImageIcon loadingIcon = new ImageIcon("medium-spinner.gif");
     JLabel loadingLabel =
-        new JLabel(" Searching... This will take a minute. ", loadingIcon, JLabel.CENTER);
+        new JLabel(" Searching... This will may a minute. ", loadingIcon, JLabel.CENTER);
     loadingLabel.setFont(mainFont);
     loadingCard.add(loadingLabel);
     resultsCard = new JPanel(new GridLayout(0, 1, 0, 0));

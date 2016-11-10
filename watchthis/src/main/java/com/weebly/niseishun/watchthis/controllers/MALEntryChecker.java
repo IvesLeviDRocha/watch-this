@@ -1,6 +1,7 @@
 package com.weebly.niseishun.watchthis.controllers;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,11 +17,14 @@ public class MALEntryChecker implements Runnable {
   private Entry entry;
   private StaffList staff;
   private ArrayList<Entry> entries;
+  private HashMap<String, Float> genres;
 
-  public MALEntryChecker(ArrayList<Entry> entries, Entry entry, StaffList staff) {
+  public MALEntryChecker(ArrayList<Entry> entries, Entry entry, StaffList staff,
+      HashMap<String, Float> genres) {
     this.entry = entry;
     this.staff = staff;
     this.entries = entries;
+    this.genres = genres;
   }
 
   public void run() {
@@ -59,6 +63,14 @@ public class MALEntryChecker implements Runnable {
       String name = element.select(MALSearcher.staffNameSelector).first().html();
       if (staffMap.containsKey(name)) {
         entry.addToBonus(staffMap.get(name));
+      }
+    }
+    // for each genre
+    Elements genreList = staffPage.selectElements(MALSearcher.genreSelector);
+    for (Element genre : genreList) {
+      String genreTitle = genre.html();
+      if (genres.containsKey(genreTitle)) {
+        entry.addToBonus(genres.get(genreTitle));
       }
     }
   }
