@@ -16,6 +16,7 @@ public class Entry implements Comparable<Entry> {
   private float popularity;
 
   private static float popularityAdjustingFactor = 1f;
+  private static float resultAdjustingFactor = 2f;
 
   public Entry(String title, String url) {
     this.title = title;
@@ -65,11 +66,21 @@ public class Entry implements Comparable<Entry> {
   }
 
   public float getMatchValue() {
-    return (popularity * 100) * popularityAdjustingFactor + bonus;
+    return ((popularity * 100) * popularityAdjustingFactor + bonus) / resultAdjustingFactor;
+  }
+
+  public void bonusToLimit(int limit) {
+    if (bonus > limit) {
+      bonus = limit;
+    }
   }
 
   public static void updatePopularityAdjustingFactor(float factor) {
     popularityAdjustingFactor = factor;
+  }
+
+  public static void updateResultAdjustingFactor(float factor) {
+    resultAdjustingFactor = factor;
   }
 
 }

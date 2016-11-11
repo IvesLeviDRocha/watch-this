@@ -42,7 +42,6 @@ public class PageScrapper {
       } catch (IOException e) {
         if (e instanceof HttpStatusException) {
           HttpStatusException httpse = (HttpStatusException) e;
-          System.out.println(httpse.getStatusCode());
           if (httpse.getStatusCode() != 429) {
             throw new PageUnavailableException();
           }

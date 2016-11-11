@@ -53,7 +53,13 @@ class MALListRetriever implements Runnable {
         String mean = meanElement.html();
         int index = mean.indexOf("Mean Score: ");
         index = index + 12;
+        try {
         userMeanScore = Float.valueOf(mean.substring(index, index + 3));
+        } catch (NumberFormatException e) {
+          System.out.println("number format exception");
+          stop = true;
+          break;
+        }
         apiUrl = MALSearcher.malAPIurlPrefix + user.getUsername() + MALSearcher.malAPIurlSufix;
         break;
       } catch (PageUnavailableException e) {

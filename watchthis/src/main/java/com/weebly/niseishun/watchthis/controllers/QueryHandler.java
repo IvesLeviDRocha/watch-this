@@ -24,7 +24,7 @@ public class QueryHandler {
    */
   public ArrayList<Entry> getRecommendationsWithURL(String url, Source source) {
     int numOfUsersToCheck = 50;
-    float minimumPopularity = 0.3f;
+    float minimumPopularity = 0.1f;
     ArrayList<Entry> recommendations = new ArrayList<Entry>();
     switch (source) {
       case MAL:

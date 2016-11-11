@@ -5,10 +5,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RequestManager {
 
   private static int requestLimit = 3;
-  private static int browserRequestLimit = 30;
+  private static int browserRequestLimit = 600;
   private static AtomicInteger requests;
   private static AtomicInteger browserRequests;
   private static long refreshTime = 500;
+  private static int counterToBrowserRefresh = 2;
+  private static int maxCounterToBrowserRefresh = 3;
 
   public static final int BROWSER = 0;
   public static final int MALAPI = 1;
@@ -31,9 +33,11 @@ public class RequestManager {
           if (requests.get() > 0) {
             requests.decrementAndGet();
           }
-          if (browserRequests.get() > 0) {
+          if (browserRequests.get() > 0 && counterToBrowserRefresh <= 0) {
             browserRequests.set(0);
+            counterToBrowserRefresh = maxCounterToBrowserRefresh;
           }
+          counterToBrowserRefresh--;
         }
       }
     });

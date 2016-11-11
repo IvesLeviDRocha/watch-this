@@ -34,6 +34,9 @@ public class MALSearcher {
   public static final float characterDesignValue = 12f;
   public static final float genreValue = 16f;
   public static final float genreValueDecline = 0f;
+  public static final float userRecValueInitial = 80f;
+  public static final float userRecValueDecline = 5f;
+  public static final float userRecValueFloor = 0f;
 
   public static final String userSelector =
       "table.table-recently-updated > tbody > tr:not(:first-child)";
@@ -63,11 +66,18 @@ public class MALSearcher {
   public static final String malAPIurlSufix = "&status=all&type=anime.";
   public static final String genreSelector =
       "#content > table > tbody > tr > td.borderClass > div > div:contains(Genre) > a";
+  public static final String userRecSelector =
+      "#content > table > tbody > tr > td:nth-child(2) > div.js-scrollfix-bottom-rel > div.borderClass "
+          + "> table > tbody > tr > td[valign]:nth-child(2)";
+  public static final String userRecTitleSelector =
+      "div[style]:nth-child(2) > a:nth-child(1) > strong";
+  public static final String userRecsSufix = "/userrecs";
 
 
   private String url;
   private HashMap<String, Float> staffPositions;
   private HashMap<String, Float> genres;
+  private HashMap<String, Float> userRecs;
 
   public MALSearcher(String url) throws PageUnavailableException {
     this.url = absoluteUrl(url);
@@ -82,7 +92,7 @@ public class MALSearcher {
     staffPositions.put("Original Character Design", characterDesignValue);
     staffPositions.put("Chief Animation Director", animationDirectorValue);
     genres = new HashMap<String, Float>();
-
+    userRecs = new HashMap<String, Float>();
 
     System.out.println("mal searcher created for " + this.url);
   }
@@ -182,6 +192,24 @@ public class MALSearcher {
       genres.put(genre.html(), genreValue - dec * genreValueDecline);
       dec++;
     }
+    // get user recs
+    PageScrapper recsPage = PageScrapper.fromUrl(url + userRecsSufix);
+    Elements recs = recsPage.selectElements(userRecSelector);
+    int recIndex = 0;
+    for (Element element : recs) {
+      Element titleElement = element.select(userRecTitleSelector).first();
+      if (titleElement == null) {
+        continue;
+      }
+      String title = titleElement.html();
+      float value = userRecValueInitial - (userRecValueDecline * recIndex);
+      if (value >= userRecValueFloor) {
+        userRecs.put(title, value);
+      } else {
+        userRecs.put(title, userRecValueFloor);
+      }
+      recIndex++;
+    }
 
     ArrayList<Thread> retrievers = new ArrayList<Thread>();
     for (int i = 0; i < users.size(); i++) {
@@ -198,17 +226,6 @@ public class MALSearcher {
       }
     }
 
-    /*
-     * // create threads to check users list. max thread count = simultaneousThreads for (int i = 0;
-     * i < users.size(); i += simultaneousThreads) { ArrayList<Thread> retrievers = new
-     * ArrayList<Thread>(); // create the threads according to limit for (int j = i; j < i +
-     * simultaneousThreads; j++) { if (j < users.size()) { User user = users.get(j); Thread
-     * retriever = new Thread(new MALListRetriever(user, entriesMap, seriesName));
-     * retrievers.add(retriever); retriever.start(); } } // wait for threads before creating again
-     * for (Thread retriever : retrievers) { try { retriever.join(); } catch (InterruptedException
-     * e) { e.printStackTrace(); } } System.out.println("done one thread loop"); }
-     */
-
     System.out.println("done getting entries");
     // list of entries to be returned
     ArrayList<Entry> entries = new ArrayList<Entry>();
@@ -223,14 +240,21 @@ public class MALSearcher {
 
     // for each entry above minimum popularity, adjust popularity counter, calculate bonus and
     // add to list
-    System.out.println("entriesMap size: " + entriesMap.size());
+    int mapSize = entriesMap.size();
+    System.out.println("entriesMap size: " + mapSize);
     ArrayList<Thread> checkers = new ArrayList<Thread>();
+
+    if (mapSize > 1000) {
+      minPopularity = minPopularity * 2;
+    } else if (mapSize > 700) {
+      minPopularity = minPopularity * 1.5f;
+    }
 
     for (String key : entriesMap.keySet()) {
       Entry entry = entriesMap.get(key);
       entry.calculatePopularity(counterForInputSeries);
-      if (entry.getPopularity() >= minPopularity) {
-        Thread checker = new Thread(new MALEntryChecker(entries, entry, staff, genres));
+      if (entry.getPopularity() >= minPopularity && entry.getCounter() > 3) {
+        Thread checker = new Thread(new MALEntryChecker(entries, entry, staff, genres, userRecs));
         checkers.add(checker);
         checker.start();
       }
