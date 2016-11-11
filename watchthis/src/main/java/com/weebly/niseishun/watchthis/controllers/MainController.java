@@ -28,6 +28,7 @@ public class MainController {
    * initial setup
    */
   private void init() {
+    RequestManager.init();
     gui = new MainGUI(this);
     queryHandler = new QueryHandler();
     inputParser = new InputParser();

@@ -1,23 +1,18 @@
 package com.weebly.niseishun.watchthis.controllers;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
+import com.weebly.niseishun.watchthis.exception.PageUnavailableException;
 import com.weebly.niseishun.watchthis.model.Entry;
+import com.weebly.niseishun.watchthis.model.StaffList;
 import com.weebly.niseishun.watchthis.model.User;
 
 /**
@@ -28,32 +23,77 @@ import com.weebly.niseishun.watchthis.model.User;
  */
 public class MALSearcher {
 
-  private String userSelector = "table.table-recently-updated > tbody > tr:not(:first-child)";
-  private String nameSelector = "td.borderClass.di-t.w100:first-child > div.di-tc.va-m.al.pl4 > a";
-  private String listUrlPrefix = "https://myanimelist.net/animelist/";
-  private String listUrlSuffix = "?status=2";
-  private String statsSuffix = "/stats?m=all&show=";
-  private int pageElementsIncrement = 75;
-  private String categoryTotalsSelector = ":contains(Mean Score:)";
-  private String seriesPagePrefix = "https://myanimelist.net/anime/";
-  private String malAPIurlPrefix = "https://myanimelist.net/malappinfo.php?u=";
-  private String malAPIurlSufix = "&status=all&type=anime.";
-  private String titleSelector = "#contentWrapper > div:nth-child(1) > h1 > span";
-  private String scoreSelectorFromStats = "td:nth-child(2)";
-  private String detailsSelector = "#horiznav_nav > ul > li:nth-child(1) > a";
+  public static final float mainVAValue = 2f;
+  public static final float otherVAValue = 0.5f;
+  public static final float directorValue = 28f;
+  public static final float creatorValue = 36f;
+  public static final float musicValue = 18f;
+  public static final float scriptValue = 18f;
+  public static final float animationDirectorValue = 12f;
+  public static final float seriesCompositionValue = 18f;
+  public static final float characterDesignValue = 12f;
+  public static final float genreValue = 16f;
+  public static final float genreValueDecline = 0f;
+  public static final float userRecValueInitial = 80f;
+  public static final float userRecValueDecline = 5f;
+  public static final float userRecValueFloor = 0f;
+
+  public static final String userSelector =
+      "table.table-recently-updated > tbody > tr:not(:first-child)";
+  public static final String nameSelector =
+      "td.borderClass.di-t.w100:first-child > div.di-tc.va-m.al.pl4 > a";
+  public static final String listUrlPrefix = "https://myanimelist.net/animelist/";
+  public static final String listUrlSuffix = "?status=2";
+  public static final String statsSuffix = "/stats?m=all&show=";
+  public static final int pageElementsIncrement = 75;
+  public static final String titleSelector = "#contentWrapper > div:nth-child(1) > h1 > span";
+  public static final String scoreSelectorFromStats = "td:nth-child(2)";
+  public static final String detailsSelector = "#horiznav_nav > ul > li:nth-child(1) > a";
+  public static final String staffSuffix = "/characters";
+  public static final String characterStaffListSelector =
+      "#content > table > tbody > tr > td:nth-child(2) > div.js-scrollfix-bottom-rel > table";
+  public static final String characterRoleSelector = "tbody > tr > td:nth-child(2) > div > small";
+  public static final String vaNameSelector =
+      "tbody > tr > td:nth-child(3) > table > tbody > tr:nth-child(1) > td:nth-child(1) > a";
+  public static final String staffListSelector =
+      "#content > table > tbody > tr > td:nth-child(2) > div.js-scrollfix-bottom-rel > table:last-child > tbody > tr";
+  public static final String staffNameSelector = "td:nth-child(2) > a";
+  public static final String staffPositionSelector = "td:nth-child(2) > small";
+  public static final String categoryTotalsSelector =
+      ":contains(Mean Score:), td.category_totals:contains(Mean Score:)";
+  public static final String seriesPagePrefix = "https://myanimelist.net/anime/";
+  public static final String malAPIurlPrefix = "https://myanimelist.net/malappinfo.php?u=";
+  public static final String malAPIurlSufix = "&status=all&type=anime.";
+  public static final String genreSelector =
+      "#content > table > tbody > tr > td.borderClass > div > div:contains(Genre) > a";
+  public static final String userRecSelector =
+      "#content > table > tbody > tr > td:nth-child(2) > div.js-scrollfix-bottom-rel > div.borderClass "
+          + "> table > tbody > tr > td[valign]:nth-child(2)";
+  public static final String userRecTitleSelector =
+      "div[style]:nth-child(2) > a:nth-child(1) > strong";
+  public static final String userRecsSufix = "/userrecs";
+
 
   private String url;
+  private HashMap<String, Float> staffPositions;
+  private HashMap<String, Float> genres;
+  private HashMap<String, Float> userRecs;
 
-  public MALSearcher(String url) {
-    PageScrapper inputPage;
-    try {
-      inputPage = PageScrapper.fromUrl(url);
-      this.url = inputPage.selectFirstElement(detailsSelector).attr("href");
-    } catch (IOException e) {
-      System.out.println("error connecting");
-      e.printStackTrace();
-      this.url = url;
-    }
+  public MALSearcher(String url) throws PageUnavailableException {
+    this.url = absoluteUrl(url);
+    staffPositions = new HashMap<String, Float>();
+    staffPositions.put("Original Creator", creatorValue);
+    staffPositions.put("Director", directorValue);
+    staffPositions.put("Music", musicValue);
+    staffPositions.put("Series Composition", seriesCompositionValue);
+    staffPositions.put("Animation Director", animationDirectorValue);
+    staffPositions.put("Character Design", characterDesignValue);
+    staffPositions.put("Script", scriptValue);
+    staffPositions.put("Original Character Design", characterDesignValue);
+    staffPositions.put("Chief Animation Director", animationDirectorValue);
+    genres = new HashMap<String, Float>();
+    userRecs = new HashMap<String, Float>();
+
     System.out.println("mal searcher created for " + this.url);
   }
 
@@ -63,9 +103,10 @@ public class MALSearcher {
    * @param url of series
    * @param numOfUsers to be returned
    * @return list of users with specified size
+   * @throws PageUnavailableException
    * @throws IOException
    */
-  public ArrayList<User> getLastUpdatedUsers(int numOfUsers) throws IOException {
+  public ArrayList<User> getLastUpdatedUsers(int numOfUsers) throws PageUnavailableException {
     ArrayList<User> users = new ArrayList<User>();
     int page = 0;
     while (users.size() < numOfUsers) {
@@ -96,218 +137,146 @@ public class MALSearcher {
    * @param minLikes minimum number of users to have liked a series for it to be recommended
    * @param seriesUrl name of series the user input
    * @return list of recommended series
+   * @throws PageUnavailableException
    * @throws IOException
    */
-  public ArrayList<Entry> getRecommendedSeriesFromUsers(ArrayList<User> users, int minLikes)
-      throws IOException {
-    int simultaneousThreads = 6;
+  public ArrayList<Entry> getRecommendedSeriesFromUsers(ArrayList<User> users, float minPopularity)
+      throws PageUnavailableException {
     ConcurrentHashMap<String, Entry> entriesMap = new ConcurrentHashMap<String, Entry>();
-
-    PageScrapper seriesPage = PageScrapper.fromUrl(url);
+    // get series data
+    String staffUrl = url + staffSuffix;
+    PageScrapper seriesPage = PageScrapper.fromUrl(staffUrl);
     String seriesName = seriesPage.selectFirstElement(titleSelector).html();
+    System.out.println(seriesName);
+    // get staff
+    StaffList staff = new StaffList();
+    // for each character
+    List<Element> characterList = seriesPage.selectElements(characterStaffListSelector);
+    characterList = characterList.subList(0, characterList.size() - 1);
+    for (Element element : characterList) {
+      Element nameContainer = element.select(MALSearcher.vaNameSelector).first();
+      if (nameContainer == null) {
+        continue;
+      }
+      String va = nameContainer.html();
+      String role = element.select(characterRoleSelector).first().html();
+      if (role.equals("Main")) {
+        staff.addToList(va, mainVAValue);
+      } else {
+        staff.addToList(va, otherVAValue);
+      }
+    }
+    // for each staff
+    Elements staffList = seriesPage.selectElements(staffListSelector);
+    for (Element element : staffList) {
+      Element staffPosition = element.select(staffPositionSelector).first();
+      if (staffPosition == null) {
+        continue;
+      }
+      String[] roles = staffPosition.html().split(", ");
+      String name = element.select(staffNameSelector).first().html();
+      for (String role : roles) {
+        if (staffPositions.containsKey(role)) {
+          staff.addToList(name, staffPositions.get(role));
+        }
+      }
+    }
+    System.out.println("done staff list");
+    // for each genre
+    Elements genreList = seriesPage.selectElements(genreSelector);
+    int dec = 0;
+    for (Element genre : genreList) {
+      if (genre == null) {
+        continue;
+      }
+      genres.put(genre.html(), genreValue - dec * genreValueDecline);
+      dec++;
+    }
+    // get user recs
+    PageScrapper recsPage = PageScrapper.fromUrl(url + userRecsSufix);
+    Elements recs = recsPage.selectElements(userRecSelector);
+    int recIndex = 0;
+    for (Element element : recs) {
+      Element titleElement = element.select(userRecTitleSelector).first();
+      if (titleElement == null) {
+        continue;
+      }
+      String title = titleElement.html();
+      float value = userRecValueInitial - (userRecValueDecline * recIndex);
+      if (value >= userRecValueFloor) {
+        userRecs.put(title, value);
+      } else {
+        userRecs.put(title, userRecValueFloor);
+      }
+      recIndex++;
+    }
 
-    for (int i = 0; i < users.size(); i += simultaneousThreads) {
-      ArrayList<Thread> retrievers = new ArrayList<Thread>();
-      for (int j = i; j < i + simultaneousThreads; j++) {
-        if (j < users.size()) {
-          User user = users.get(j);
-          Thread retriever = new Thread(new MALListRetriever(user, entriesMap, seriesName));
-          retrievers.add(retriever);
-          retriever.start();
-          try {
-            Thread.sleep(50);
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-        }
-      }
-      for (Thread retriever : retrievers) {
-        try {
-          retriever.join();
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
+    ArrayList<Thread> retrievers = new ArrayList<Thread>();
+    for (int i = 0; i < users.size(); i++) {
+      User user = users.get(i);
+      Thread retriever = new Thread(new MALListRetriever(user, entriesMap, seriesName));
+      retrievers.add(retriever);
+      retriever.start();
+    }
+    for (Thread retriever : retrievers) {
       try {
-        Thread.sleep(200);
+        retriever.join();
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
     }
+
+    System.out.println("done getting entries");
+    // list of entries to be returned
     ArrayList<Entry> entries = new ArrayList<Entry>();
 
+    // confirm total of relevant users and remove input series from list
+    int initialSampleSize = users.size();
     int counterForInputSeries = entriesMap.get(seriesName).getCounter();
     System.out.println("relevant users checked: " + counterForInputSeries);
     entriesMap.remove(seriesName);
+    float popularityAdjustingFactor = counterForInputSeries * 1f / initialSampleSize;
+    Entry.updatePopularityAdjustingFactor(popularityAdjustingFactor);
+
+    // for each entry above minimum popularity, adjust popularity counter, calculate bonus and
+    // add to list
+    int mapSize = entriesMap.size();
+    System.out.println("entriesMap size: " + mapSize);
+    ArrayList<Thread> checkers = new ArrayList<Thread>();
+
+    if (mapSize > 1000) {
+      minPopularity = minPopularity * 2;
+    } else if (mapSize > 700) {
+      minPopularity = minPopularity * 1.5f;
+    }
 
     for (String key : entriesMap.keySet()) {
       Entry entry = entriesMap.get(key);
-      if (entry.getCounter() >= minLikes) {
-        entry.updateCounterRelativeToMaxPopularity(counterForInputSeries);
-        entries.add(entry);
+      entry.calculatePopularity(counterForInputSeries);
+      if (entry.getPopularity() >= minPopularity && entry.getCounter() > 3) {
+        Thread checker = new Thread(new MALEntryChecker(entries, entry, staff, genres, userRecs));
+        checkers.add(checker);
+        checker.start();
       }
     }
+    for (Thread checker : checkers) {
+      try {
+        checker.join();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+    System.out.println("total recommendations: " + entries.size());
+
+    // sort list of entries by popularity
     Collections.sort(entries);
     Collections.reverse(entries);
     return entries;
   }
 
-  class MALListRetriever implements Runnable {
-
-    private User user;
-    private ConcurrentHashMap<String, Entry> entriesMap;
-    private String inputSeriesTitle;
-
-    public MALListRetriever(User user, ConcurrentHashMap<String, Entry> entriesMap,
-        String inputSeriesTitle) {
-      this.user = user;
-      this.entriesMap = entriesMap;
-      this.inputSeriesTitle = inputSeriesTitle;
-    }
-
-    public void run() {
-      boolean stop = false;
-      int tries = 0;
-      while (!stop) {
-        try {
-          PageScrapper userList = PageScrapper.fromUrl(user.getListUrl());
-          String mean = userList.selectFirstElement(categoryTotalsSelector).html();
-          int index = mean.indexOf("Mean Score: ");
-          index = index + 12;
-          float userMeanScore = Float.valueOf(mean.substring(index, index + 3));
-          ArrayList<Entry> userLikedSeries = new ArrayList<Entry>();
-
-          String apiUrl = malAPIurlPrefix + user.getUsername() + malAPIurlSufix;
-
-
-          URL url = new URL(apiUrl);
-          URLConnection connection = url.openConnection();
-
-          Document doc = parseXML(connection.getInputStream());
-
-          NodeList descNodes = doc.getElementsByTagName("anime");
-
-          boolean relevant = false;
-
-          // for each anime node
-          for (int i = 0; i < descNodes.getLength(); i++) {
-            // get children
-            Node node = descNodes.item(i);
-            NodeList children = node.getChildNodes();
-
-            // get series name
-            String seriesTitle = "";
-            for (int j = 0; j < children.getLength(); j++) {
-              Node childNode = children.item(j);
-              if (childNode.getNodeName().equals("series_title")) {
-                seriesTitle = childNode.getTextContent();
-                break;
-              }
-            }
-
-            // check if input series
-            boolean inputSeries = false;
-            if (seriesTitle.equals(inputSeriesTitle)) {
-              inputSeries = true;
-            }
-
-            if (!inputSeries) {
-              // check if completed (only matters if its not the input)
-              boolean completed = false;
-              for (int j = 0; j < children.getLength(); j++) {
-                Node childNode = children.item(j);
-                if (childNode.getNodeName().equals("my_status")) {
-                  int status = Integer.valueOf(childNode.getTextContent());
-                  if (status == 2) {
-                    completed = true;
-                  }
-                  break;
-                }
-              }
-              if (!completed) {
-                continue;
-              }
-            }
-
-            // get score and check if its above mean score
-            float seriesScore = 0f;
-            for (int j = 0; j < children.getLength(); j++) {
-              Node childNode = children.item(j);
-              if (childNode.getNodeName().equals("my_score")) {
-                seriesScore = Float.valueOf(childNode.getTextContent());
-                break;
-              }
-            }
-
-
-            // check if above mean score
-            if (seriesScore >= userMeanScore) {
-              if (inputSeries) {
-                relevant = true;
-              }
-
-              // get series url
-              String seriesId = "";
-              for (int j = 0; j < children.getLength(); j++) {
-                Node childNode = children.item(j);
-                if (childNode.getNodeName().equals("series_animedb_id")) {
-                  seriesId = childNode.getTextContent();
-                  break;
-                }
-              }
-              String entryUrl = seriesPagePrefix + seriesId;
-              Entry entry = new Entry(seriesTitle, entryUrl);
-              userLikedSeries.add(entry);
-            } else {
-              if (inputSeries) {
-                relevant = false;
-                break;
-              }
-            }
-
-          }
-          if (relevant) {
-            for (Entry entry : userLikedSeries) {
-              String seriesTitle = entry.getTitle();
-              if (entriesMap.containsKey(entry.getTitle())) {
-                entriesMap.get(seriesTitle).incrementCounter();
-              } else {
-                entriesMap.put(seriesTitle, entry);
-              }
-            }
-          }
-          stop = true;
-        } catch (Exception e) {
-          tries++;
-          if (tries > 1) {
-            stop = true;
-            break;
-          }
-          try {
-            Thread.sleep(200);
-          } catch (InterruptedException e1) {
-            System.out.println("could not wait");
-          }
-        }
-      }
-    }
-
-  }
-
-  private Document parseXML(InputStream stream) throws Exception {
-    DocumentBuilderFactory objDocumentBuilderFactory = null;
-    DocumentBuilder objDocumentBuilder = null;
-    Document doc = null;
-    try {
-      objDocumentBuilderFactory = DocumentBuilderFactory.newInstance();
-      objDocumentBuilder = objDocumentBuilderFactory.newDocumentBuilder();
-      doc = objDocumentBuilder.parse(stream);
-    } catch (Exception ex) {
-      System.out.println("throwing ex when parsing xml");
-      throw ex;
-    }
-
-    return doc;
+  public static String absoluteUrl(String url) throws PageUnavailableException {
+    PageScrapper scrapper = PageScrapper.fromUrl(url);
+    return scrapper.selectFirstElement(detailsSelector).attr("href");
   }
 
 }
