@@ -2,24 +2,35 @@ package com.weebly.niseishun.watchthis.view;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.net.URI;
 import java.util.ArrayList;
 
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingWorker;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder;
 
 import com.weebly.niseishun.watchthis.controllers.MainController;
 import com.weebly.niseishun.watchthis.model.Entry;
@@ -39,7 +50,9 @@ public class MainGUI {
   private JButton urlQuery;
   private CardLayout cardLayout;
   private Font mainFont;
-  private Font smallFont;
+  private Font boldFont;
+  private JList<Object> list;
+  private JScrollPane listScroller;
 
   public static final String STANDBY = "standby";
   public static final String LOADING = "loading";
@@ -67,23 +80,33 @@ public class MainGUI {
   private void init() {
 
     mainFont = new Font("Serif", Font.PLAIN, 24);
-    smallFont = new Font("Sans-Serif", Font.PLAIN, 18);
+    boldFont = new Font("Serif", Font.BOLD, 24);
+
+    Border margin;
+    Border border;
 
     mainFrame = new JFrame("Watch This - PROTOTYPE");
     mainFrame.setBounds(400, 100, 450, 300);
     mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    mainFrame.setBackground(Color.DARK_GRAY);
+    mainFrame.setResizable(false);
 
     controlPanel = new JPanel();
     controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.PAGE_AXIS));
-    controlPanel.setPreferredSize(new Dimension(900, 720));
-    controlPanel.setBorder(new EmptyBorder(10, 20, 50, 20));
-    inputPanel = new JPanel();
+    controlPanel.setPreferredSize(new Dimension(900, 640));
+    margin = new EmptyBorder(10, 20, 20, 20);
+    border = BorderFactory.createEtchedBorder();
+    controlPanel.setBorder(new CompoundBorder(border, margin));
+    controlPanel.setBackground(Color.DARK_GRAY);
+    inputPanel = new JPanel(new FlowLayout(FlowLayout.LEADING, 10, 0));
     inputPanel.setPreferredSize(new Dimension(500, 260));
     JLabel urlLabel = new JLabel("Input a url:");
     urlLabel.setFont(mainFont);
+    urlLabel.setForeground(Color.WHITE);
     inputPanel.add(urlLabel);
     urlField = new JTextField(30);
     urlField.setFont(mainFont);
+    urlField.setPreferredSize(new Dimension(100, 40));
     inputPanel.add(urlField);
     urlQuery = new JButton("Search by url");
     urlQuery.setFont(mainFont);
@@ -105,22 +128,63 @@ public class MainGUI {
       }
     });
     inputPanel.add(urlQuery);
+    inputPanel.setBackground(Color.DARK_GRAY);
+    inputPanel.setPreferredSize(new Dimension(100, 140));
+    margin = new EmptyBorder(30, 5, 10, 5);
+    inputPanel.setBorder(margin);
     controlPanel.add(inputPanel);
 
+    margin = new EmptyBorder(10, 5, 100, 5);
     cardLayout = new CardLayout();
     cardsPanel = new JPanel(cardLayout);
-    cardsPanel.setPreferredSize(new Dimension(500, 460));
+    cardsPanel.setBackground(Color.DARK_GRAY);
+    cardsPanel.setPreferredSize(new Dimension(800, 700));
     standbyCard = new JPanel(new GridLayout(0, 1, 0, 30));
+    standbyCard.setBackground(Color.DARK_GRAY);
     JLabel standbyLabel = new JLabel("Enter a series above", JLabel.CENTER);
     standbyLabel.setFont(mainFont);
+    standbyLabel.setForeground(Color.WHITE);
     standbyCard.add(standbyLabel);
-    loadingCard = new JPanel();
-    ImageIcon loadingIcon = new ImageIcon("medium-spinner.gif");
+    standbyCard.setBorder(margin);
+    loadingCard = new JPanel(new GridLayout(0, 1, 0, 30));
+    loadingCard.setBackground(Color.DARK_GRAY);
+    ImageIcon loadingIcon = new ImageIcon("res/loading.gif");
     JLabel loadingLabel =
         new JLabel(" Searching... This may take a minute. ", loadingIcon, JLabel.CENTER);
     loadingLabel.setFont(mainFont);
+    loadingLabel.setForeground(Color.WHITE);
     loadingCard.add(loadingLabel);
-    resultsCard = new JPanel(new GridLayout(0, 1, 0, 0));
+    loadingCard.setBorder(margin);
+    Object[] data = {};
+    list = new JList<Object>(data); // data has type Object[]
+    list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    list.setLayoutOrientation(JList.VERTICAL);
+    list.setVisibleRowCount(-1);
+    list.setFont(mainFont);
+    list.setBackground(Color.LIGHT_GRAY);
+    list.setForeground(Color.BLUE);
+    list.setSelectedIndex(0);
+    list.addMouseListener(new MouseAdapter() {
+      public void mouseClicked(MouseEvent evt) {
+        @SuppressWarnings("unchecked")
+        JList<Object> list = (JList<Object>) evt.getSource();
+        if (evt.getClickCount() == 2) {
+          int index = list.locationToIndex(evt.getPoint());
+          Entry clickedEntry = (Entry) list.getModel().getElementAt(index);
+          open(clickedEntry.getUrl());
+        }
+      }
+    });
+    listScroller = new JScrollPane(list);
+    listScroller.setPreferredSize(new Dimension(800, 640));
+    resultsCard = new JPanel();
+    resultsCard.setLayout(new BorderLayout());
+    resultsCard.add(listScroller, BorderLayout.CENTER);
+    resultsCard.setBackground(Color.DARK_GRAY);
+    margin = new EmptyBorder(10, 10, 10, 10);
+    border = new TitledBorder(BorderFactory.createEtchedBorder(), "Results",
+        TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, boldFont, Color.WHITE);
+    resultsCard.setBorder(new CompoundBorder(border, margin));
     cardsPanel.add(standbyCard, STANDBY);
     cardsPanel.add(loadingCard, LOADING);
     cardsPanel.add(resultsCard, RESULTS);
@@ -145,44 +209,10 @@ public class MainGUI {
   }
 
   private void updateResultsCard(ArrayList<Entry> results) {
-    resultsCard.removeAll();
-    JLabel resultsLabel = new JLabel("Watch these:", JLabel.CENTER);
-    resultsLabel.setFont(mainFont);
-    resultsCard.add(resultsLabel);
-    int limit = 10;
-    if (limit > results.size()) {
-      limit = results.size();
-    }
-    for (int i = 0; i < limit; i++) {
-      resultsCard.add(generateEntryCard(results.get(i)));
-    }
-  }
-
-  private JPanel generateEntryCard(Entry entry) {
-    JPanel panel = new JPanel();
-    panel.add(buttonToPage(entry));
-    return panel;
-  }
-
-  private JButton buttonToPage(Entry entry) {
-    String text =
-        entry.getTitle() + " |  Match: " + Math.floor(entry.getMatchValue()) + "%";
-    JButton button = new JButton(text);
-    button.addActionListener(new OpenUrlAction(entry.getUrl()));
-    button.setFont(smallFont);
-    return button;
-  }
-
-  class OpenUrlAction implements ActionListener {
-    private String url;
-
-    public OpenUrlAction(String url) {
-      this.url = url;
-    }
-
-    public void actionPerformed(ActionEvent e) {
-      open(this.url);
-    }
+    list.setListData(results.toArray());
+    list.setSelectedIndex(0);
+    list.repaint();
+    list.revalidate();
   }
 
   private static void open(String url) {

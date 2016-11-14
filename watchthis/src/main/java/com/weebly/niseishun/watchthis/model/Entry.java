@@ -83,4 +83,8 @@ public class Entry implements Comparable<Entry> {
     resultAdjustingFactor = factor;
   }
 
+  public String toString() {
+    return Math.round(getMatchValue()) + " % | " + title;
+  }
+
 }

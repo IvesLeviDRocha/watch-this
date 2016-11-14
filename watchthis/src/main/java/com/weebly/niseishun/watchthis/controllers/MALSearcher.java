@@ -244,11 +244,15 @@ public class MALSearcher {
     System.out.println("entriesMap size: " + mapSize);
     ArrayList<Thread> checkers = new ArrayList<Thread>();
 
-    if (mapSize > 1000) {
-      minPopularity = minPopularity * 2;
+    if (mapSize > 2000) {
+      minPopularity = minPopularity * 3f;
+    } else if (mapSize > 1500) {
+      minPopularity = minPopularity * 2.5f;
+    } else if (mapSize > 1000) {
+      minPopularity = minPopularity * 2f;
     } else if (mapSize > 700) {
       minPopularity = minPopularity * 1.5f;
-    }
+    } 
 
     for (String key : entriesMap.keySet()) {
       Entry entry = entriesMap.get(key);
