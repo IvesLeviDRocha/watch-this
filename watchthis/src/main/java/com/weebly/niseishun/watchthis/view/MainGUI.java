@@ -148,7 +148,7 @@ public class MainGUI {
     standbyCard.setBorder(margin);
     loadingCard = new JPanel(new GridLayout(0, 1, 0, 30));
     loadingCard.setBackground(Color.DARK_GRAY);
-    ImageIcon loadingIcon = new ImageIcon("res/loading.gif");
+    ImageIcon loadingIcon = new ImageIcon(getClass().getClassLoader().getResource("loading.gif"));
     JLabel loadingLabel =
         new JLabel(" Searching... This may take a minute. ", loadingIcon, JLabel.CENTER);
     loadingLabel.setFont(mainFont);
