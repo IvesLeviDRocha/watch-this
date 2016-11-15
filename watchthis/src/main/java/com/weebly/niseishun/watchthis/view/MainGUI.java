@@ -128,7 +128,7 @@ public class MainGUI {
       }
     });
     inputPanel.add(urlQuery);
-    inputPanel.setBackground(Color.DARK_GRAY);
+    inputPanel.setBackground(Color.GRAY);
     inputPanel.setPreferredSize(new Dimension(100, 140));
     margin = new EmptyBorder(30, 5, 10, 5);
     inputPanel.setBorder(margin);
