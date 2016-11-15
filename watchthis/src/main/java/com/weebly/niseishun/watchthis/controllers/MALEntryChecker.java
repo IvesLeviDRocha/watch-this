@@ -31,21 +31,74 @@ public class MALEntryChecker implements Runnable {
 
   public void run() {
     try {
-      // update url
+      // update entry's url to standard
       entry.setUrl(MALSearcher.absoluteUrl(entry.getUrl()));
       // calculate bonus
-      calculateBonus(entry, staff);
-      // add to list
+      calculateBonus();
+      // add to results list
       entries.add(entry);
     } catch (PageUnavailableException e) {
-      System.out.println("error in checker thread");
-      e.printStackTrace();
+      // could not check this entry
     }
   }
 
-  private void calculateBonus(Entry entry, StaffList staff) throws PageUnavailableException {
+  private void calculateBonus() throws PageUnavailableException {
+    // get map containing relevant staff
     ConcurrentHashMap<String, Float> staffMap = staff.getList();
+    // get html content from entry's page
     PageScrapper staffPage = PageScrapper.fromUrl(entry.getUrl() + MALSearcher.staffSuffix);
+    // update bonus for each criteria
+    updateBonusForVAs(staffMap, staffPage);
+    updateBonusForGenres(staffPage);
+    updateBonusForStaff(staffMap, staffPage);
+    updateBonusForUserRecs();
+  }
+
+  private void updateBonusForUserRecs() {
+    // check if user rec
+    if (userRecs.containsKey(entry.getTitle())) {
+      float value = userRecs.get(entry.getTitle());
+      entry.addToBonus(value);
+    }
+  }
+
+  private void updateBonusForStaff(ConcurrentHashMap<String, Float> staffMap,
+      PageScrapper staffPage) {
+    // for each staff
+    Elements staffList = staffPage.selectElements(MALSearcher.staffListSelector);
+    float value = 0f;
+    for (Element element : staffList) {
+      String name = element.select(MALSearcher.staffNameSelector).first().html();
+      if (staffMap.containsKey(name)) {
+        value += staffMap.get(name);
+      }
+    }
+    limitValueAndAddToBonus(value, 100);
+  }
+
+  private void limitValueAndAddToBonus(float value, int limit) {
+    if (value > limit) {
+      entry.addToBonus(limit);
+    } else {
+      entry.addToBonus(value);
+    }
+  }
+
+  private void updateBonusForGenres(PageScrapper staffPage) {
+    // for each genre
+    float value = 0f;
+    Elements genreList = staffPage.selectElements(MALSearcher.genreSelector);
+    for (Element genre : genreList) {
+      String genreTitle = genre.html();
+      if (genres.containsKey(genreTitle)) {
+        value += genres.get(genreTitle);
+      }
+    }
+    limitValueAndAddToBonus(value, 30);
+  }
+
+  private void updateBonusForVAs(ConcurrentHashMap<String, Float> staffMap,
+      PageScrapper staffPage) {
     // for each va
     List<Element> characterList = staffPage.selectElements(MALSearcher.characterStaffListSelector);
     characterList = characterList.subList(0, characterList.size() - 1);
@@ -60,44 +113,7 @@ public class MALEntryChecker implements Runnable {
         value += staffMap.get(va);
       }
     }
-    if (value > 10) {
-      entry.addToBonus(10);
-    } else {
-      entry.addToBonus(value);
-    }
-    // for each genre
-    value = 0f;
-    Elements genreList = staffPage.selectElements(MALSearcher.genreSelector);
-    for (Element genre : genreList) {
-      String genreTitle = genre.html();
-      if (genres.containsKey(genreTitle)) {
-        value += genres.get(genreTitle);
-      }
-    }
-    if (value > 30) {
-      entry.addToBonus(30);
-    } else {
-      entry.addToBonus(value);
-    }
-    // for each staff
-    Elements staffList = staffPage.selectElements(MALSearcher.staffListSelector);
-    value = 0f;
-    for (Element element : staffList) {
-      String name = element.select(MALSearcher.staffNameSelector).first().html();
-      if (staffMap.containsKey(name)) {
-        value += staffMap.get(name);
-      }
-    }
-    if (value > 100) {
-      entry.addToBonus(100);
-    } else {
-      entry.addToBonus(value);
-    }
-    // check if user rec
-    if (userRecs.containsKey(entry.getTitle())) {
-      value = userRecs.get(entry.getTitle());
-      entry.addToBonus(value);
-    }
+    limitValueAndAddToBonus(value, 10);
   }
 
 }

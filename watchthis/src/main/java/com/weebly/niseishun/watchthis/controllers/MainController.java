@@ -35,9 +35,13 @@ public class MainController {
   }
 
   public void urlSearch(String url) {
+    // get source
     Source source = inputParser.parseInput(url);
+    // show loading screen while searching for results
     gui.showLoading();
+    // search for results
     ArrayList<Entry> results = queryHandler.getRecommendationsWithURL(url, source);
+    // display results
     gui.displayResults(results);
   }
 
