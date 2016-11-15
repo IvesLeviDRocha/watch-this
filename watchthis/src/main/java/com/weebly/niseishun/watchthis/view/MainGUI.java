@@ -37,6 +37,17 @@ import com.weebly.niseishun.watchthis.model.Entry;
 
 public class MainGUI {
 
+  public static final String STANDBY = "standby";
+  public static final String LOADING = "loading";
+  public static final String RESULTS = "results";
+  public static final Font MAINFONT = new Font("Serif", Font.PLAIN, 24);
+  public static final Font BOLDFONT = new Font("Serif", Font.BOLD, 24);
+
+  public static final Color BACKGROUND = Color.DARK_GRAY;
+  public static final Color TEXT = Color.WHITE;
+  public static final Color RESULTS_BACKGROUND = Color.LIGHT_GRAY;
+  public static final Color RESULTS_TEXT = Color.BLUE;
+
   private MainController controller;
 
   private JFrame mainFrame;
@@ -49,14 +60,8 @@ public class MainGUI {
   private JTextField urlField;
   private JButton urlQuery;
   private CardLayout cardLayout;
-  private Font mainFont;
-  private Font boldFont;
   private JList<Object> list;
   private JScrollPane listScroller;
-
-  public static final String STANDBY = "standby";
-  public static final String LOADING = "loading";
-  public static final String RESULTS = "results";
 
   public MainGUI(MainController controller) {
     this.controller = controller;
@@ -78,91 +83,40 @@ public class MainGUI {
   }
 
   private void init() {
-
-    mainFont = new Font("Serif", Font.PLAIN, 24);
-    boldFont = new Font("Serif", Font.BOLD, 24);
-
-    Border margin;
-    Border border;
-
-    mainFrame = new JFrame("Watch This - PROTOTYPE");
-    mainFrame.setBounds(400, 100, 450, 300);
-    mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    mainFrame.setBackground(Color.DARK_GRAY);
-    mainFrame.setResizable(false);
-
-    controlPanel = new JPanel();
-    controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.PAGE_AXIS));
-    controlPanel.setPreferredSize(new Dimension(900, 640));
-    margin = new EmptyBorder(10, 20, 20, 20);
-    border = BorderFactory.createEtchedBorder();
-    controlPanel.setBorder(new CompoundBorder(border, margin));
-    controlPanel.setBackground(Color.DARK_GRAY);
-    inputPanel = new JPanel(new FlowLayout(FlowLayout.LEADING, 10, 0));
-    inputPanel.setPreferredSize(new Dimension(500, 260));
-    JLabel urlLabel = new JLabel("Input a url:");
-    urlLabel.setFont(mainFont);
-    urlLabel.setForeground(Color.WHITE);
-    inputPanel.add(urlLabel);
-    urlField = new JTextField(30);
-    urlField.setFont(mainFont);
-    urlField.setPreferredSize(new Dimension(100, 40));
-    inputPanel.add(urlField);
-    urlQuery = new JButton("Search by url");
-    urlQuery.setFont(mainFont);
-    urlQuery.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        new SwingWorker<Void, String>() {
-          @Override
-          protected Void doInBackground() throws Exception {
-            urlSearch(urlField.getText());
-            return null;
-          }
-
-          @Override
-          protected void done() {
-            // nothing
-          }
-        }.execute();
-
-      }
-    });
-    inputPanel.add(urlQuery);
-    inputPanel.setBackground(Color.GRAY);
-    inputPanel.setPreferredSize(new Dimension(100, 140));
-    margin = new EmptyBorder(30, 5, 10, 5);
-    inputPanel.setBorder(margin);
+    initFrame();
+    initControlPane();
+    initInputPanel();
     controlPanel.add(inputPanel);
+    initCardsPanel();
+    controlPanel.add(cardsPanel);
+    mainFrame.getContentPane().add(controlPanel, BorderLayout.NORTH);
+  }
 
-    margin = new EmptyBorder(10, 5, 100, 5);
+  private void initCardsPanel() {
+    Border margin = new EmptyBorder(10, 5, 100, 5);
     cardLayout = new CardLayout();
     cardsPanel = new JPanel(cardLayout);
-    cardsPanel.setBackground(Color.DARK_GRAY);
+    cardsPanel.setBackground(BACKGROUND);
     cardsPanel.setPreferredSize(new Dimension(800, 700));
-    standbyCard = new JPanel(new GridLayout(0, 1, 0, 30));
-    standbyCard.setBackground(Color.DARK_GRAY);
-    JLabel standbyLabel = new JLabel("Enter a series above", JLabel.CENTER);
-    standbyLabel.setFont(mainFont);
-    standbyLabel.setForeground(Color.WHITE);
-    standbyCard.add(standbyLabel);
-    standbyCard.setBorder(margin);
-    loadingCard = new JPanel(new GridLayout(0, 1, 0, 30));
-    loadingCard.setBackground(Color.DARK_GRAY);
-    ImageIcon loadingIcon = new ImageIcon(getClass().getClassLoader().getResource("loading.gif"));
-    JLabel loadingLabel =
-        new JLabel(" Searching... This may take a minute. ", loadingIcon, JLabel.CENTER);
-    loadingLabel.setFont(mainFont);
-    loadingLabel.setForeground(Color.WHITE);
-    loadingCard.add(loadingLabel);
-    loadingCard.setBorder(margin);
+    initStandbyCard(margin);
+    initLoadingCard(margin);
+    initResultsCard();
+    cardsPanel.add(standbyCard, STANDBY);
+    cardsPanel.add(loadingCard, LOADING);
+    cardsPanel.add(resultsCard, RESULTS);
+    cardLayout.show(cardsPanel, STANDBY);
+  }
+
+  private void initResultsCard() {
+    Border margin;
     Object[] data = {};
-    list = new JList<Object>(data); // data has type Object[]
+    list = new JList<Object>(data);
     list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     list.setLayoutOrientation(JList.VERTICAL);
     list.setVisibleRowCount(-1);
-    list.setFont(mainFont);
-    list.setBackground(Color.LIGHT_GRAY);
-    list.setForeground(Color.BLUE);
+    list.setFont(MAINFONT);
+    list.setBackground(RESULTS_BACKGROUND);
+    list.setForeground(RESULTS_TEXT);
     list.setSelectedIndex(0);
     list.addMouseListener(new MouseAdapter() {
       public void mouseClicked(MouseEvent evt) {
@@ -180,18 +134,88 @@ public class MainGUI {
     resultsCard = new JPanel();
     resultsCard.setLayout(new BorderLayout());
     resultsCard.add(listScroller, BorderLayout.CENTER);
-    resultsCard.setBackground(Color.DARK_GRAY);
+    resultsCard.setBackground(BACKGROUND);
     margin = new EmptyBorder(10, 10, 10, 10);
-    border = new TitledBorder(BorderFactory.createEtchedBorder(), "Results",
-        TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, boldFont, Color.WHITE);
+    Border border =
+        new TitledBorder(BorderFactory.createEtchedBorder(), "Results - [Match Value] | [Title]",
+            TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, BOLDFONT, TEXT);
     resultsCard.setBorder(new CompoundBorder(border, margin));
-    cardsPanel.add(standbyCard, STANDBY);
-    cardsPanel.add(loadingCard, LOADING);
-    cardsPanel.add(resultsCard, RESULTS);
-    cardLayout.show(cardsPanel, STANDBY);
-    controlPanel.add(cardsPanel);
+  }
 
-    mainFrame.getContentPane().add(controlPanel, BorderLayout.NORTH);
+  private void initLoadingCard(Border margin) {
+    loadingCard = new JPanel(new GridLayout(0, 1, 0, 30));
+    loadingCard.setBackground(BACKGROUND);
+    ImageIcon loadingIcon = new ImageIcon(getClass().getClassLoader().getResource("loading.gif"));
+    JLabel loadingLabel =
+        new JLabel(" Searching... This may take a minute. ", loadingIcon, JLabel.CENTER);
+    loadingLabel.setFont(MAINFONT);
+    loadingLabel.setForeground(TEXT);
+    loadingCard.add(loadingLabel);
+    loadingCard.setBorder(margin);
+  }
+
+  private void initStandbyCard(Border margin) {
+    standbyCard = new JPanel(new GridLayout(0, 1, 0, 30));
+    standbyCard.setBackground(BACKGROUND);
+    JLabel standbyLabel = new JLabel("Enter a series above", JLabel.CENTER);
+    standbyLabel.setFont(MAINFONT);
+    standbyLabel.setForeground(TEXT);
+    standbyCard.add(standbyLabel);
+    standbyCard.setBorder(margin);
+  }
+
+  private void initInputPanel() {
+    inputPanel = new JPanel(new FlowLayout(FlowLayout.LEADING, 10, 0));
+    inputPanel.setPreferredSize(new Dimension(500, 260));
+    JLabel urlLabel = new JLabel("Input a url:");
+    urlLabel.setFont(MAINFONT);
+    urlLabel.setForeground(TEXT);
+    inputPanel.add(urlLabel);
+    urlField = new JTextField(30);
+    urlField.setFont(MAINFONT);
+    urlField.setPreferredSize(new Dimension(100, 40));
+    inputPanel.add(urlField);
+    urlQuery = new JButton("Search by url");
+    urlQuery.setFont(MAINFONT);
+    urlQuery.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        new SwingWorker<Void, String>() {
+          @Override
+          protected Void doInBackground() throws Exception {
+            urlSearch(urlField.getText());
+            return null;
+          }
+
+          @Override
+          protected void done() {
+            // nothing
+          }
+        }.execute();
+      }
+    });
+    inputPanel.add(urlQuery);
+    inputPanel.setBackground(BACKGROUND);
+    inputPanel.setPreferredSize(new Dimension(100, 140));
+    Border margin = new EmptyBorder(30, 5, 10, 5);
+    inputPanel.setBorder(margin);
+  }
+
+  private void initControlPane() {
+    controlPanel = new JPanel();
+    controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.PAGE_AXIS));
+    controlPanel.setPreferredSize(new Dimension(900, 640));
+    Border margin = new EmptyBorder(10, 20, 20, 20);
+    Border border = BorderFactory.createEtchedBorder();
+    controlPanel.setBorder(new CompoundBorder(border, margin));
+    controlPanel.setBackground(BACKGROUND);
+  }
+
+  private void initFrame() {
+    mainFrame = new JFrame("Watch This - PROTOTYPE");
+    mainFrame.setBounds(400, 100, 450, 300);
+    mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    mainFrame.setBackground(Color.DARK_GRAY);
+    mainFrame.setResizable(false);
   }
 
   private void urlSearch(String url) {

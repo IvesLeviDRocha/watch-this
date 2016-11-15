@@ -18,8 +18,17 @@ public class RequestManager {
   public static void init() {
     requests = new AtomicInteger(0);
     browserRequests = new AtomicInteger(0);
+    Thread refresher = createRefresherThread();
+    refresher.start();
+  }
+
+  private static Thread createRefresherThread() {
     Thread refresher = new Thread(new Runnable() {
       public void run() {
+        runRefreshCycle();
+      }
+
+      private void runRefreshCycle() {
         while (true) {
           boolean slept = false;
           while (!slept) {
@@ -41,48 +50,59 @@ public class RequestManager {
         }
       }
     });
-    refresher.start();
+    return refresher;
   }
 
   public static boolean requestPermission(int category) {
+    boolean permission;
     switch (category) {
       case BROWSER:
-        while (true) {
-          if (browserRequests.get() < browserRequestLimit) {
-            browserRequests.incrementAndGet();
-            return true;
-          }
-          boolean slept = false;
-          while (!slept) {
-            try {
-              Thread.sleep(200);
-              slept = true;
-            } catch (InterruptedException e) {
-              // did not sleep, try again
-            }
-          }
-        }
+        permission = browserRequest();
+        return permission;
       case MALAPI:
-        while (true) {
-          if (requests.get() < requestLimit) {
-            requests.incrementAndGet();
-            return true;
-          }
-          boolean slept = false;
-          while (!slept) {
-            try {
-              Thread.sleep(200);
-              slept = true;
-            } catch (InterruptedException e) {
-              // did not sleep, try again
-            }
-          }
-        }
+        permission = malAPIRequest();
+        return permission;
       default:
         return false;
 
     }
 
+  }
+
+  private static boolean malAPIRequest() {
+    while (true) {
+      if (requests.get() < requestLimit) {
+        requests.incrementAndGet();
+        return true;
+      }
+      boolean slept = false;
+      while (!slept) {
+        try {
+          Thread.sleep(200);
+          slept = true;
+        } catch (InterruptedException e) {
+          // did not sleep, try again
+        }
+      }
+    }
+  }
+
+  private static boolean browserRequest() {
+    while (true) {
+      if (browserRequests.get() < browserRequestLimit) {
+        browserRequests.incrementAndGet();
+        return true;
+      }
+      boolean slept = false;
+      while (!slept) {
+        try {
+          Thread.sleep(200);
+          slept = true;
+        } catch (InterruptedException e) {
+          // did not sleep, try again
+        }
+      }
+    }
   }
 
 

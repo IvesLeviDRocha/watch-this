@@ -28,19 +28,25 @@ public class QueryHandler {
     ArrayList<Entry> recommendations = new ArrayList<Entry>();
     switch (source) {
       case MAL:
-        MALSearcher searcher;
-        ArrayList<User> users;
-        try {
-          searcher = new MALSearcher(url);
-          users = searcher.getLastUpdatedUsers(numOfUsersToCheck);
-          recommendations = searcher.getRecommendedSeriesFromUsers(users, minimumPopularity);
-        } catch (PageUnavailableException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        }
+        recommendations = malSearch(url, numOfUsersToCheck, minimumPopularity, recommendations);
         break;
       default:
         // TODO invalid source error
+    }
+    return recommendations;
+  }
+
+  private ArrayList<Entry> malSearch(String url, int numOfUsersToCheck, float minimumPopularity,
+      ArrayList<Entry> recommendations) {
+    MALSearcher searcher;
+    ArrayList<User> users;
+    try {
+      searcher = new MALSearcher(url);
+      users = searcher.getLastUpdatedUsers(numOfUsersToCheck);
+      recommendations = searcher.getRecommendedSeriesFromUsers(users, minimumPopularity);
+    } catch (PageUnavailableException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
     }
     return recommendations;
   }
