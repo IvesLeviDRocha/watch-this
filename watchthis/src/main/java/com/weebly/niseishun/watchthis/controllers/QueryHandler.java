@@ -2,6 +2,7 @@ package com.weebly.niseishun.watchthis.controllers;
 
 import java.util.ArrayList;
 
+import com.weebly.niseishun.watchthis.exception.InvalidURLException;
 import com.weebly.niseishun.watchthis.exception.PageUnavailableException;
 import com.weebly.niseishun.watchthis.model.Entry;
 import com.weebly.niseishun.watchthis.model.Source;
@@ -21,8 +22,10 @@ public class QueryHandler {
    * @param url to series page
    * @param source of series page
    * @return list of recommendations
+   * @throws InvalidURLException
    */
-  public ArrayList<Entry> getRecommendationsWithURL(String url, Source source) {
+  public ArrayList<Entry> getRecommendationsWithURL(String url, Source source)
+      throws InvalidURLException {
     int numOfUsersToCheck = 50;
     float minimumPopularity = 0.1f;
     ArrayList<Entry> recommendations = new ArrayList<Entry>();
@@ -31,13 +34,13 @@ public class QueryHandler {
         recommendations = malSearch(url, numOfUsersToCheck, minimumPopularity, recommendations);
         break;
       default:
-        // TODO invalid source error
+        throw new InvalidURLException();
     }
     return recommendations;
   }
 
   private ArrayList<Entry> malSearch(String url, int numOfUsersToCheck, float minimumPopularity,
-      ArrayList<Entry> recommendations) {
+      ArrayList<Entry> recommendations) throws InvalidURLException {
     MALSearcher searcher;
     ArrayList<User> users;
     try {
@@ -45,8 +48,7 @@ public class QueryHandler {
       users = searcher.getLastUpdatedUsers(numOfUsersToCheck);
       recommendations = searcher.getRecommendedSeriesFromUsers(users, minimumPopularity);
     } catch (PageUnavailableException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      throw new InvalidURLException();
     }
     return recommendations;
   }

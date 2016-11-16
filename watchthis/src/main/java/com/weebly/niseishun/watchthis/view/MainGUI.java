@@ -62,6 +62,7 @@ public class MainGUI {
   private CardLayout cardLayout;
   private JList<Object> list;
   private JScrollPane listScroller;
+  private JLabel standbyLabel;
 
   public MainGUI(MainController controller) {
     this.controller = controller;
@@ -80,6 +81,13 @@ public class MainGUI {
 
   public void showLoading() {
     switchStatus(LOADING);
+  }
+
+  public void showMessageAndStandby(String message) {
+    standbyLabel.setText(message);
+    standbyCard.revalidate();
+    standbyCard.repaint();
+    switchStatus(STANDBY);
   }
 
   private void init() {
@@ -157,7 +165,7 @@ public class MainGUI {
   private void initStandbyCard(Border margin) {
     standbyCard = new JPanel(new GridLayout(0, 1, 0, 30));
     standbyCard.setBackground(BACKGROUND);
-    JLabel standbyLabel = new JLabel("Enter a series above", JLabel.CENTER);
+    standbyLabel = new JLabel("Enter a series above", JLabel.CENTER);
     standbyLabel.setFont(MAINFONT);
     standbyLabel.setForeground(TEXT);
     standbyCard.add(standbyLabel);
@@ -166,7 +174,6 @@ public class MainGUI {
 
   private void initInputPanel() {
     inputPanel = new JPanel(new FlowLayout(FlowLayout.LEADING, 10, 0));
-    inputPanel.setPreferredSize(new Dimension(500, 260));
     JLabel urlLabel = new JLabel("Input a url:");
     urlLabel.setFont(MAINFONT);
     urlLabel.setForeground(TEXT);
@@ -195,7 +202,7 @@ public class MainGUI {
     });
     inputPanel.add(urlQuery);
     inputPanel.setBackground(BACKGROUND);
-    inputPanel.setPreferredSize(new Dimension(100, 140));
+    inputPanel.setPreferredSize(new Dimension(100, 240));
     Border margin = new EmptyBorder(30, 5, 10, 5);
     inputPanel.setBorder(margin);
   }

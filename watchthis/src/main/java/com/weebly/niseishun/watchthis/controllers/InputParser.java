@@ -1,5 +1,6 @@
 package com.weebly.niseishun.watchthis.controllers;
 
+import com.weebly.niseishun.watchthis.exception.InvalidURLException;
 import com.weebly.niseishun.watchthis.model.Source;
 
 public class InputParser {
@@ -9,9 +10,20 @@ public class InputParser {
    * 
    * @param user input url
    * @return source type of url
+   * @throws InvalidURLException
    */
-  public Source parseInput(String input) {
-    return Source.MAL;
+  public Source parseInput(String input) throws InvalidURLException {
+    if (input == null) {
+      throw new InvalidURLException();
+    }
+    if (input.length() < 30) {
+      throw new InvalidURLException();
+    }
+    System.out.println(input.substring(0,30));
+    if (input.substring(0,30).equalsIgnoreCase("https://myanimelist.net/anime/")) {
+      return Source.MAL;
+    }
+    throw new InvalidURLException();
   }
 
 }
