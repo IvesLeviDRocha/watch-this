@@ -118,14 +118,10 @@ public class MALSearcher {
     ArrayList<User> users = new ArrayList<User>();
     int page = 0;
     while (users.size() < numOfUsers) {
-      System.out.println("getting user");
       PageScrapper seriesPage =
           PageScrapper.fromUrl(url + statsSuffix + String.valueOf(page * pageElementsIncrement));
-      System.out.println("got page");
       Elements userData = seriesPage.selectElements(userSelector);
-      System.out.println("got user data");
       addUsersToList(numOfUsers, users, userData);
-      System.out.println("added to list");
       page++;
     }
     return users;

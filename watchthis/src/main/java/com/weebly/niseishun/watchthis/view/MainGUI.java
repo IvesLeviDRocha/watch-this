@@ -8,6 +8,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -22,6 +23,7 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -47,6 +49,11 @@ public class MainGUI {
   public static final Color TEXT = Color.WHITE;
   public static final Color RESULTS_BACKGROUND = Color.LIGHT_GRAY;
   public static final Color RESULTS_TEXT = Color.BLUE;
+
+  public static final String URL_HELP_MESSAGE =
+      "<html>Enter a MAL URL (e.g. https://myanimelist.net/anime/47/Akira)<br/>"
+          + "and click \"Search by url\" to receive recomendations on similar series you might like.<br/><br/>"
+          + "Double-click a result to open its url in your browser.";
 
   private MainController controller;
 
@@ -173,12 +180,12 @@ public class MainGUI {
   }
 
   private void initInputPanel() {
-    inputPanel = new JPanel(new FlowLayout(FlowLayout.LEADING, 10, 0));
+    inputPanel = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 0));
     JLabel urlLabel = new JLabel("Input a url:");
     urlLabel.setFont(MAINFONT);
     urlLabel.setForeground(TEXT);
     inputPanel.add(urlLabel);
-    urlField = new JTextField(30);
+    urlField = new JTextField(22);
     urlField.setFont(MAINFONT);
     urlField.setPreferredSize(new Dimension(100, 40));
     inputPanel.add(urlField);
@@ -201,16 +208,27 @@ public class MainGUI {
       }
     });
     inputPanel.add(urlQuery);
+    JButton urlHelpButton = new JButton("?");
+    urlHelpButton.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        JOptionPane.showMessageDialog(mainFrame, URL_HELP_MESSAGE, "How to use",
+            JOptionPane.INFORMATION_MESSAGE);
+      }
+    });
+    urlHelpButton.setMargin(new Insets(0, 0, 0, 0));
+    urlHelpButton.setPreferredSize(new Dimension(24, 42));
+    urlHelpButton.setBackground(Color.CYAN);
+    inputPanel.add(urlHelpButton);
     inputPanel.setBackground(BACKGROUND);
     inputPanel.setPreferredSize(new Dimension(100, 240));
-    Border margin = new EmptyBorder(30, 5, 10, 5);
+    Border margin = new EmptyBorder(30, 0, 10, 0);
     inputPanel.setBorder(margin);
   }
 
   private void initControlPane() {
     controlPanel = new JPanel();
     controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.PAGE_AXIS));
-    controlPanel.setPreferredSize(new Dimension(900, 640));
+    controlPanel.setPreferredSize(new Dimension(780, 640));
     Border margin = new EmptyBorder(10, 20, 20, 20);
     Border border = BorderFactory.createEtchedBorder();
     controlPanel.setBorder(new CompoundBorder(border, margin));
