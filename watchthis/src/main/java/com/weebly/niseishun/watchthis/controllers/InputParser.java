@@ -19,8 +19,7 @@ public class InputParser {
     if (input.length() < 30) {
       throw new InvalidURLException();
     }
-    System.out.println(input.substring(0,30));
-    if (input.substring(0,30).equalsIgnoreCase("https://myanimelist.net/anime/")) {
+    if (input.substring(0, 30).equalsIgnoreCase("https://myanimelist.net/anime/")) {
       return Source.MAL;
     }
     throw new InvalidURLException();
