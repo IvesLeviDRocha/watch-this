@@ -53,7 +53,10 @@ public class MainGUI {
   public static final String URL_HELP_MESSAGE =
       "<html>Enter a MAL URL (e.g. https://myanimelist.net/anime/47/Akira)<br/>"
           + "and click \"Search by url\" to receive recomendations on similar series you might like.<br/><br/>"
-          + "Double-click a result to open its url in your browser.";
+          + "Double-click a result to open its url in your browser.<br/><br/>"
+          + "Watch This - Version 1.0.1<br/>"
+          + "Author: Levi Rocha | https://pino.github.io/ <br/>"
+          + "Searching animation provided by: Kitten Rain | https://hoppip.tumblr.com/";
 
   private MainController controller;
 
@@ -236,7 +239,7 @@ public class MainGUI {
   }
 
   private void initFrame() {
-    mainFrame = new JFrame("Watch This - PROTOTYPE");
+    mainFrame = new JFrame("Watch This - Version 1.0.1");
     mainFrame.setBounds(400, 100, 450, 300);
     mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     mainFrame.setBackground(Color.DARK_GRAY);

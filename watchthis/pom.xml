@@ -2,7 +2,6 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.weebly.niseishun</groupId>
 	<artifactId>watchthis</artifactId>
 	<packaging>jar</packaging>
 
@@ -27,5 +26,11 @@
 		</dependency>
 	</dependencies>
 	<description>Get recommendations based on your favorite series.</description>
-	<version>0.1.2</version>
+	<version>1.0.1</version>
+	<groupId>io.github.pino</groupId>
+	<organization>
+		<name>Levi Rocha</name>
+		<url>https://pino.github.io</url>
+	</organization>
+	<url>https://pino.github.io</url>
 </project>
